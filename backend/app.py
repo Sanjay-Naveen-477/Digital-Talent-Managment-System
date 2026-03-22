@@ -31,3 +31,22 @@ def login():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+@app.route("/google-login", methods=["POST"])
+def google_login():
+    data = request.json
+    email = data.get("email")
+    name = data.get("name")
+
+    user = users.find_one({"email": email})
+
+    if not user:
+        users.insert_one({
+            "email": email,
+            "name": name,
+            "role": "user",
+            "auth_type": "google"
+        })
+
+    return jsonify({"status": "success"})
