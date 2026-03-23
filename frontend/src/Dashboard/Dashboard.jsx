@@ -1,5 +1,7 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import Chart from 'chart.js/auto';
+import axios from 'axios';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -8,19 +10,42 @@ export default function Dashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [userFilter, setUserFilter] = useState('all');
+    const location = useLocation();
 
     const taskDistRef = useRef(null);
     const completionStatsRef = useRef(null);
 
-    const initialTasks = [
-        { id: 1, name: "Design System Update", user: "john", userName: "John Doe", deadline: "Mar 25, 2026", status: "progress", statusLabel: "In Progress", statusClass: "status-progress" },
-        { id: 2, name: "User Authentication Module", user: "sarah", userName: "Sarah Miller", deadline: "Mar 22, 2026", status: "completed", statusLabel: "Completed", statusClass: "status-completed" },
-        { id: 3, name: "API Integration Testing", user: "mike", userName: "Mike Johnson", deadline: "Mar 28, 2026", status: "pending", statusLabel: "Pending", statusClass: "status-pending" },
-        { id: 4, name: "Mobile App Development", user: "sarah", userName: "Sarah Miller", deadline: "Apr 05, 2026", status: "progress", statusLabel: "In Progress", statusClass: "status-progress" },
-        { id: 5, name: "Database Optimization", user: "john", userName: "John Doe", deadline: "Mar 20, 2026", status: "completed", statusLabel: "Completed", statusClass: "status-completed" },
-    ];
+    const [tasks, setTasks] = useState([]);
+    const [metrics, setMetrics] = useState({
+        total: 0,
+        completed: 0,
+        pending: 0,
+        rate: 0
+    });
 
-    const [tasks, setTasks] = useState(initialTasks);
+    useEffect(() => {
+        const fetchTasks = async () => {
+            try {
+                const response = await axios.get('http://localhost:5000/tasks');
+                if (response.data.status === 'success') {
+                    const fetchedTasks = response.data.tasks;
+                    setTasks(fetchedTasks);
+                    
+                    const total = fetchedTasks.length;
+                    const completed = fetchedTasks.filter(t => t.status === 'completed').length;
+                    const pending = fetchedTasks.filter(t => t.status === 'pending').length;
+                    const inProgress = fetchedTasks.filter(t => t.status === 'progress').length;
+                    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+                    
+                    setMetrics({ total, completed, pending: pending + inProgress, rate });
+                }
+            } catch (error) {
+                console.error("Error fetching tasks:", error);
+            }
+        };
+
+        fetchTasks();
+    }, []);
 
     useEffect(() => {
         let taskChart = null;
@@ -178,45 +203,45 @@ export default function Dashboard() {
                     <nav>
                         <ul className="nav-menu">
                             <li className="nav-item">
-                                <a href="#" className="nav-link active">
+                                <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
                                     <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                                     </svg>
                                     Dashboard
-                                </a>
+                                </Link>
                             </li>
                             <li className="nav-item">
-                                <a href="#" className="nav-link">
+                                <Link to="/tasks" className={`nav-link ${location.pathname === '/tasks' ? 'active' : ''}`}>
                                     <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                     </svg>
                                     Tasks
-                                </a>
+                                </Link>
                             </li>
                             <li className="nav-item">
-                                <a href="#" className="nav-link">
+                                <Link to="/team" className={`nav-link ${location.pathname === '/team' ? 'active' : ''}`}>
                                     <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                     </svg>
                                     Team
-                                </a>
+                                </Link>
                             </li>
                             <li className="nav-item">
-                                <a href="#" className="nav-link">
+                                <Link to="/reports" className={`nav-link ${location.pathname === '/reports' ? 'active' : ''}`}>
                                     <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                     </svg>
                                     Reports
-                                </a>
+                                </Link>
                             </li>
                             <li className="nav-item">
-                                <a href="#" className="nav-link">
+                                <Link to="/settings" className={`nav-link ${location.pathname === '/settings' ? 'active' : ''}`}>
                                     <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                     Settings
-                                </a>
+                                </Link>
                             </li>
                         </ul>
                     </nav>
@@ -264,9 +289,9 @@ export default function Dashboard() {
                                 </svg>
                             </div>
                             <div className="card-label">Total Tasks</div>
-                            <div className="card-value">248</div>
+                            <div className="card-value">{metrics.total}</div>
                             <div className="card-trend">
-                                <span>↗</span> 12% from last month
+                                <span>Real-time</span> tracked tasks
                             </div>
                         </div>
 
@@ -277,9 +302,9 @@ export default function Dashboard() {
                                 </svg>
                             </div>
                             <div className="card-label">Completed Tasks</div>
-                            <div className="card-value">186</div>
+                            <div className="card-value">{metrics.completed}</div>
                             <div className="card-trend">
-                                <span>↗</span> 8% completion rate
+                                <span>Real-time</span> completed metrics
                             </div>
                         </div>
 
@@ -290,9 +315,9 @@ export default function Dashboard() {
                                 </svg>
                             </div>
                             <div className="card-label">Pending Tasks</div>
-                            <div className="card-value">62</div>
+                            <div className="card-value">{metrics.pending}</div>
                             <div className="card-trend">
-                                <span>↘</span> 5% decrease
+                                <span>Real-time</span> active tasks
                             </div>
                         </div>
 
@@ -303,9 +328,9 @@ export default function Dashboard() {
                                 </svg>
                             </div>
                             <div className="card-label">Completion Rate</div>
-                            <div className="card-value">75%</div>
+                            <div className="card-value">{metrics.rate}%</div>
                             <div className="card-trend">
-                                <span>↗</span> Above target
+                                <span>Real-time</span> efficiency
                             </div>
                         </div>
                     </div>
@@ -350,15 +375,19 @@ export default function Dashboard() {
                                     <tbody>
                                         {tasks
                                             .filter(t => (statusFilter === 'all' || t.status === statusFilter) &&
-                                                (userFilter === 'all' || t.user === userFilter) &&
+                                                (userFilter === 'all' || (t.user || '').toLowerCase() === userFilter) &&
                                                 (t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                    t.userName.toLowerCase().includes(searchTerm.toLowerCase())))
+                                                    (t.assignedTo || '').toLowerCase().includes(searchTerm.toLowerCase())))
                                             .map((task) => (
                                                 <tr key={task.id}>
                                                     <td>{task.name}</td>
-                                                    <td>{task.userName}</td>
+                                                    <td>{task.assignedTo || task.userName}</td>
                                                     <td>{task.deadline}</td>
-                                                    <td><span className={`status-badge ${task.statusClass}`}>{task.statusLabel}</span></td>
+                                                    <td>
+                                                        <span className={`status-badge status-${task.status}`}>
+                                                            {task.status === 'completed' ? 'Completed' : task.status === 'progress' ? 'In Progress' : 'Pending'}
+                                                        </span>
+                                                    </td>
                                                     <td>
                                                         <div className="action-buttons">
                                                             <button className="btn-icon" onClick={handleEditTask}>

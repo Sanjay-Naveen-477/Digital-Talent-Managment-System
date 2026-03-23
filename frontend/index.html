@@ -8,6 +8,18 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Suppress Google OAuth warnings that don't affect functionality
+      const originalWarn = console.warn;
+      console.warn = function(...args) {
+        const message = args[0]?.toString?.() || String(args[0]);
+        if (message.includes('[GSI_LOGGER]') || 
+            message.includes('Cross-Origin-Opener-Policy')) {
+          return;
+        }
+        originalWarn.apply(console, args);
+      };
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

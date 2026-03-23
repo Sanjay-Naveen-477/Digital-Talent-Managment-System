@@ -5,12 +5,56 @@ import "./Login.css";
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
 
+const API_URL = "http://localhost:5000";
+
+// Suppress Google OAuth console errors that don't affect functionality
+const originalError = console.error;
+console.error = function(...args) {
+  const message = args[0]?.toString?.() || String(args[0]);
+  if (message.includes('[GSI_LOGGER]') || 
+      message.includes('Cross-Origin-Opener-Policy')) {
+    return;
+  }
+  originalError.apply(console, args);
+};
+
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
+  const [signUpData, setSignUpData] = useState({ username: "", email: "", password: "", role: "user" });
+  const [signUpError, setSignUpError] = useState("");
+  const [signUpLoading, setSignUpLoading] = useState(false);
+  const [signUpSuccessMsg, setSignUpSuccessMsg] = useState("");
+
   const navigate = useNavigate();
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setSignUpLoading(true);
+    setSignUpError("");
+    setSignUpSuccessMsg("");
+
+    try {
+      const res = await axios.post(`${API_URL}/signup`, signUpData);
+      if (res.data.status === "success") {
+        setSignUpSuccessMsg("Account created! You can now sign in.");
+        setTimeout(() => {
+          setIsSignUpModalOpen(false);
+          setSignUpSuccessMsg("");
+          setSignUpData({ username: "", email: "", password: "", role: "user" });
+        }, 2000);
+      }
+    } catch (error) {
+      console.error(error);
+      setSignUpError(error.response?.data?.message || "Failed to create account.");
+    } finally {
+      setSignUpLoading(false);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -18,7 +62,7 @@ function Login() {
     setErrorMsg("");
 
     try {
-      const res = await axios.post("http://127.0.0.1:5000/login", {
+      const res = await axios.post(`${API_URL}/login`, {
         email,
         password,
       });
@@ -30,7 +74,7 @@ function Login() {
       }
     } catch (error) {
       console.error(error);
-      setErrorMsg("Server error. Please try again later.");
+      setErrorMsg(error.response?.data?.message || "Server error. Please try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -44,26 +88,39 @@ function Login() {
           <span className="login-logo-text">TalentHub</span>
         </div>
 
+        <div className="login-divider">
+          <span>or</span>
+        </div>
+
         <div style={{ marginBottom: "20px" }}>
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
+              setGoogleLoading(true);
               const decoded = jwtDecode(credentialResponse.credential);
 
               try {
-                const res = await axios.post("http://127.0.0.1:5000/google-login", {
+                const res = await axios.post(`${API_URL}/google-login`, {
                   email: decoded.email,
                   name: decoded.name,
+                }, {
+                  headers: {
+                    "Content-Type": "application/json",
+                  }
                 });
 
                 if (res.data.status === "success") {
                   navigate("/dashboard");
                 }
               } catch (err) {
-                console.error(err);
+                console.error("Google login error:", err);
+                setErrorMsg("Google login failed. Please check your connection and try again.");
+              } finally {
+                setGoogleLoading(false);
               }
             }}
             onError={() => {
-              console.log("Google Login Failed");
+              setErrorMsg("Google login failed. Please ensure your origin is authorized in Google Cloud Console.");
+              console.error("Google Login Error");
             }}
           />
         </div>
@@ -114,8 +171,89 @@ function Login() {
           <button type="submit" className="btn-login" disabled={isLoading}>
             {isLoading ? <span className="loading-spinner"></span> : "Sign In"}
           </button>
+
+          <p className="signup-prompt">
+            Don't have an account yet?{" "}
+            <span className="signup-link" onClick={() => {
+              setIsSignUpModalOpen(true);
+              setErrorMsg("");
+              setSignUpSuccessMsg("");
+              setSignUpError("");
+            }}>
+              Sign up with email
+            </span>
+          </p>
         </form>
       </div>
+
+      {isSignUpModalOpen && (
+        <div className="login-modal-overlay" onClick={() => setIsSignUpModalOpen(false)}>
+          <div className="login-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Create an Account</h3>
+              <button className="close-btn" onClick={() => setIsSignUpModalOpen(false)}>&times;</button>
+            </div>
+
+            {signUpSuccessMsg && <div className="success-message">{signUpSuccessMsg}</div>}
+            {signUpError && <div className="error-message">{signUpError}</div>}
+
+            <form onSubmit={handleSignUp}>
+              <div className="form-group">
+                <label className="form-label">Role</label>
+                <select
+                  className="form-input"
+                  value={signUpData.role}
+                  onChange={(e) => setSignUpData({ ...signUpData, role: e.target.value })}
+                  required
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Username</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Choose a username"
+                  value={signUpData.username}
+                  onChange={(e) => setSignUpData({ ...signUpData, username: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  placeholder="Enter your email"
+                  value={signUpData.email}
+                  onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  placeholder="Create a password"
+                  value={signUpData.password}
+                  onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                  required
+                />
+              </div>
+
+              <button type="submit" className="btn-login" disabled={signUpLoading || signUpSuccessMsg}>
+                {signUpLoading ? <span className="loading-spinner"></span> : "Sign Up"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
