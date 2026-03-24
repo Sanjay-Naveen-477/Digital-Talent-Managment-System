@@ -180,7 +180,7 @@ export default function Tasks() {
   const uniqueUsers = [...new Set(tasks.map(task => task.user))];
 
   return (
-    <div style={styles.container}>
+    <div className="dashboard-page" style={styles.container}>
       <h1 style={styles.title}>Task Management</h1>
 
       <div style={styles.controlsBar}>
@@ -429,7 +429,7 @@ const styles = {
   },
   deleteButton: {
     padding: '10px 15px',
-    backgroundColor: '#ef4444',
+    backgroundColor: '#44ef4f',
     color: 'white',
     border: 'none',
     borderRadius: '8px',

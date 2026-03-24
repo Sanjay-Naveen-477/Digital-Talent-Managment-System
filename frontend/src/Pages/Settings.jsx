@@ -221,7 +221,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="settings-container">
+    <div className="settings-container dashboard-page">
       <div className="settings-header">
         <h1>Settings</h1>
         <p>Manage your account settings and preferences.</p>

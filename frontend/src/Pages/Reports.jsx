@@ -138,7 +138,7 @@ export default function Reports() {
   });
 
   return (
-    <div className="reports-container">
+    <div className="reports-container dashboard-page">
       <div className="reports-header flex-between">
         <div>
           <h1>System Analytics & Reports</h1>
