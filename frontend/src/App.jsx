@@ -1,7 +1,7 @@
 
-
 import './App.css';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";    
 import Login from "./Authentication/login";
 import Dashboard from "./Dashboard/Dashboard";
 import Layout from "./Components/Layout";
@@ -26,6 +26,7 @@ function App() {
           <Route path="*" element={<Dashboard />} />
         </Route>
       </Routes>
+      <Toaster position="top-right" reverseOrder={false} />
     </BrowserRouter>
   );
 }

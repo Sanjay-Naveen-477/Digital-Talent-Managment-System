@@ -1,4 +1,5 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import './Team.css';
 
 export default function Team() {
@@ -58,6 +59,7 @@ export default function Team() {
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [teamForm, setTeamForm] = useState({ name: '', lead: '', status: 'Active' });
   const [taskForm, setTaskForm] = useState({ title: '', assignee: '', status: 'Pending' });
+  const [memberForm, setMemberForm] = useState({ name: '', role: '' });
   const [error, setError] = useState('');
 
   const totalTeams = teams.length;
@@ -106,6 +108,7 @@ export default function Team() {
 
   const saveTeam = () => {
     if (!teamForm.name.trim() || !teamForm.lead.trim()) {
+      toast.error('Team name and lead are required.');
       setError('Team name and lead are required.');
       return;
     }
@@ -118,6 +121,7 @@ export default function Team() {
             : team
         )
       );
+      toast.success('Team updated successfully!');
     } else {
       const next = {
         id: Math.max(0, ...teams.map((t) => t.id)) + 1,
@@ -126,6 +130,7 @@ export default function Team() {
         tasks: []
       };
       setTeams((prev) => [...prev, next]);
+      toast.success('Team created successfully!');
     }
 
     setModalOpen(false);
@@ -137,16 +142,22 @@ export default function Team() {
     if (!window.confirm('Delete this team?')) return;
     setTeams((prev) => prev.filter((team) => team.id !== id));
     if (selectedTeamId === id) setSelectedTeamId(null);
+    toast.success('Team deleted successfully!');
   };
 
   const addMember = (memberName, memberRole) => {
-    if (!selectedTeam || !isAdmin || !memberName.trim() || !memberRole.trim()) return;
+    if (!selectedTeam || !isAdmin) return;
+    if (!memberName.trim() || !memberRole.trim()) {
+      toast.error('Member name and role are required.');
+      return;
+    }
     const newMember = { id: Date.now(), name: memberName.trim(), role: memberRole.trim(), assignedTasks: 0, completedTasks: 0 };
     setTeams((prev) =>
       prev.map((team) =>
         team.id === selectedTeam.id ? { ...team, members: [...team.members, newMember] } : team
       )
     );
+    toast.success('Member added successfully!');
   };
 
   const deleteMember = (memberId) => {
@@ -156,10 +167,13 @@ export default function Team() {
         team.id === selectedTeam.id ? { ...team, members: team.members.filter((m) => m.id !== memberId) } : team
       )
     );
+    toast.success('Member removed successfully!');
   };
 
   const addTask = () => {
-    if (!selectedTeam || !isAdmin || !taskForm.title.trim() || !taskForm.assignee.trim()) {
+    if (!selectedTeam || !isAdmin) return;
+    if (!taskForm.title.trim() || !taskForm.assignee.trim()) {
+      toast.error('Task title and assignee required.');
       setError('Task title and assignee required.');
       return;
     }
@@ -179,6 +193,7 @@ export default function Team() {
 
     setTaskForm({ title: '', assignee: '', status: 'Pending' });
     setError('');
+    toast.success('Task added successfully!');
   };
 
   const toggleTaskStatus = (taskId) => {
@@ -188,9 +203,14 @@ export default function Team() {
         team.id === selectedTeam.id
           ? {
               ...team,
-              tasks: team.tasks.map((task) =>
-                task.id === taskId ? { ...task, status: task.status === 'Pending' ? 'Completed' : 'Pending' } : task
-              )
+              tasks: team.tasks.map((task) => {
+                if (task.id === taskId) {
+                  const newStatus = task.status === 'Pending' ? 'Completed' : 'Pending';
+                  toast.success(`Task marked as ${newStatus}!`);
+                  return { ...task, status: newStatus };
+                }
+                return task;
+              })
             }
           : team
       )
@@ -276,9 +296,9 @@ export default function Team() {
               </ul>
               {isAdmin && (
                 <div className="team-add-member-row">
-                  <input type="text" className="team-form-input" placeholder="Member name" value={taskForm.assignee} onChange={(e) => setTaskForm((p) => ({ ...p, assignee: e.target.value }))} />
-                  <input type="text" className="team-form-input" placeholder="Role" value={taskForm.title} onChange={(e) => setTaskForm((p) => ({ ...p, title: e.target.value }))} />
-                  <button type="button" className="add-member-btn" onClick={() => { addMember(taskForm.assignee, taskForm.title); setTaskForm((p) => ({ ...p, assignee: '', title: '' })); }}>Add Member</button>
+                  <input type="text" className="team-form-input" placeholder="Member name" value={memberForm.name} onChange={(e) => setMemberForm((p) => ({ ...p, name: e.target.value }))} />
+                  <input type="text" className="team-form-input" placeholder="Role" value={memberForm.role} onChange={(e) => setMemberForm((p) => ({ ...p, role: e.target.value }))} />
+                  <button type="button" className="add-member-btn" onClick={() => { addMember(memberForm.name, memberForm.role); setMemberForm({ name: '', role: '' }); }}>Add Member</button>
                 </div>
               )}
             </article>

@@ -15,6 +15,7 @@ client = MongoClient("mongodb+srv://sanjaynaveen477:sanjay123@cluster0.an0tz.mon
 db = client["talent_db"]
 users = db["users"]
 tasks_col = db["tasks"]
+teams_col = db["teams"]
 
 @app.route("/")
 def home():
@@ -126,6 +127,51 @@ def delete_batch():
     if task_ids:
         object_ids = [ObjectId(tid) for tid in task_ids]
         tasks_col.delete_many({"_id": {"$in": object_ids}})
+    return jsonify({"status": "success"})
+
+# --- TEAMS ENDPOINTS ---
+
+@app.route("/teams", methods=["GET"])
+def get_teams():
+    teams = []
+    for t in teams_col.find():
+        t["id"] = str(t["_id"])
+        del t["_id"]
+        teams.append(t)
+    return jsonify({"status": "success", "teams": teams})
+
+@app.route("/teams", methods=["POST"])
+def add_team():
+    data = request.json
+    new_team = {
+        "name": data.get("name"),
+        "lead": data.get("lead"),
+        "status": data.get("status", "Active"),
+        "members": data.get("members", []),
+        "tasks": data.get("tasks", [])
+    }
+    result = teams_col.insert_one(new_team)
+    new_team["id"] = str(result.inserted_id)
+    del new_team["_id"]
+    return jsonify({"status": "success", "team": new_team})
+
+@app.route("/teams/<team_id>", methods=["PUT"])
+def update_team(team_id):
+    data = request.json
+    update_data = {
+        "name": data.get("name"),
+        "lead": data.get("lead"),
+        "status": data.get("status"),
+        "members": data.get("members", []),
+        "tasks": data.get("tasks", [])
+    }
+    teams_col.update_one({"_id": ObjectId(team_id)}, {"$set": update_data})
+    update_data["id"] = task_id if "task_id" in locals() and "task_id" != None else team_id
+    return jsonify({"status": "success", "team": update_data})
+
+@app.route("/teams/<team_id>", methods=["DELETE"])
+def delete_team(team_id):
+    teams_col.delete_one({"_id": ObjectId(team_id)})
     return jsonify({"status": "success"})
 
 if __name__ == "__main__":

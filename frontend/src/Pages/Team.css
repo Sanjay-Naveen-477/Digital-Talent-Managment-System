@@ -1,13 +1,23 @@
 /* Team Component Styles */
 
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .team-container {
   padding: 30px;
-  background-color: rgba(255, 255, 255, 0.28);
+  background: linear-gradient(-45deg, #f3e8ff, #e0e7ff, #ede9fe, #fbeafe);
+  background-size: 400% 400%;
+  animation: gradientBG 5s ease infinite;
   min-height: 100vh;
   border-radius: 18px;
   margin: 20px;
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(15px);
+}
+
 .team-title {
   font-size: 28px;
   font-weight: bold;

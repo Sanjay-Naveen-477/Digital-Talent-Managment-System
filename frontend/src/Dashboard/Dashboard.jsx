@@ -1,16 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import Chart from 'chart.js/auto';
 import axios from 'axios';
 import './Dashboard.css';
 
 export default function Dashboard() {
-    const [isSidebarActive, setIsSidebarActive] = useState(false);
+    const { searchTerm } = useOutletContext() || { searchTerm: '' };
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [userFilter, setUserFilter] = useState('all');
-    const location = useLocation();
 
     const taskDistRef = useRef(null);
     const completionStatsRef = useRef(null);
@@ -192,95 +190,8 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="dashboard-container">
-            <div className="app-container">
-                {/* Sidebar */}
-                <aside className={`sidebar glass ${isSidebarActive ? 'active' : ''}`} id="sidebar">
-                    <div className="sidebar-header">
-                        <div className="logo">DT</div>
-                        <span className="logo-text">TalentHub</span>
-                    </div>
-                    <nav>
-                        <ul className="nav-menu">
-                            <li className="nav-item">
-                                <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-                                    <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                    </svg>
-                                    Dashboard
-                                </Link>
-                            </li>
-                            <li className="nav-item">
-                                <Link to="/tasks" className={`nav-link ${location.pathname === '/tasks' ? 'active' : ''}`}>
-                                    <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                    </svg>
-                                    Tasks
-                                </Link>
-                            </li>
-                            <li className="nav-item">
-                                <Link to="/team" className={`nav-link ${location.pathname === '/team' ? 'active' : ''}`}>
-                                    <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                    Team
-                                </Link>
-                            </li>
-                            <li className="nav-item">
-                                <Link to="/reports" className={`nav-link ${location.pathname === '/reports' ? 'active' : ''}`}>
-                                    <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                    </svg>
-                                    Reports
-                                </Link>
-                            </li>
-                            <li className="nav-item">
-                                <Link to="/settings" className={`nav-link ${location.pathname === '/settings' ? 'active' : ''}`}>
-                                    <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    Settings
-                                </Link>
-                            </li>
-                        </ul>
-                    </nav>
-                </aside>
-
-                {/* Main Content */}
-                <main className="main-content">
-                    {/* Top Navigation */}
-                    <div className="top-nav glass-strong">
-                        <div className="search-container">
-                            <svg className="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                type="text"
-                                className="search-input"
-                                placeholder="Search tasks, users, or projects..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="top-nav-right">
-                            <div className="icon-btn" onClick={() => setIsSidebarActive(!isSidebarActive)}>
-                                <svg width="20" height="20" fill="none" stroke="white" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                </svg>
-                                <span className="notification-badge">5</span>
-                            </div>
-                            <div className="user-profile" onClick={toggleUserMenu}>
-                                <div className="user-avatar">SM</div>
-                                <div className="user-info">
-                                    <div className="user-name">Sarah Miller</div>
-                                    <div className="user-role">Admin</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Summary Cards */}
+        <>
+            {/* Summary Cards */}
                     <div className="summary-grid">
                         <div className="summary-card glass-strong" style={{ background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%)' }}>
                             <div className="card-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -484,57 +395,8 @@ export default function Dashboard() {
                             </div>
                         </div>
                     </div>
-                </main>
-            </div>
-
-            {/* Add Task Modal */}
-            {isModalOpen && (
-                <div className="modal active" onClick={(e) => {
-                    if (e.target.className === 'modal active') setIsModalOpen(false);
-                }}>
-                    <div className="modal-content glass-strong">
-                        <div className="modal-header">
-                            <h3 className="modal-title">Add New Task</h3>
-                            <button className="close-btn" onClick={() => setIsModalOpen(false)}>&times;</button>
-                        </div>
-                        <form onSubmit={handleAddTask}>
-                            <div className="form-group">
-                                <label className="form-label">Task Name</label>
-                                <input type="text" className="form-input" placeholder="Enter task name" required />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Assign To</label>
-                                <select className="form-select" required defaultValue="">
-                                    <option value="" disabled>Select user</option>
-                                    <option value="john">John Doe</option>
-                                    <option value="sarah">Sarah Miller</option>
-                                    <option value="mike">Mike Johnson</option>
-                                    <option value="emily">Emily White</option>
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Deadline</label>
-                                <input type="date" className="form-input" required />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Status</label>
-                                <select className="form-select" required defaultValue="pending">
-                                    <option value="pending">Pending</option>
-                                    <option value="progress">In Progress</option>
-                                    <option value="completed">Completed</option>
-                                </select>
-                            </div>
-                            <div className="form-actions">
-                                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                <button type="submit" className="btn-primary">Add Task</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
             {/* Floating Action Button */}
             <button className="fab" onClick={() => setIsModalOpen(true)}>+</button>
-        </div>
+        </>
     );
 }
