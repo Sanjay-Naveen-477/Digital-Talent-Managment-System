@@ -26,7 +26,7 @@ function App() {
           <Route path="*" element={<Dashboard />} />
         </Route>
       </Routes>
-      <Toaster position="top-right" reverseOrder={false} />
+      <Toaster position="top-center" reverseOrder={false} toastOptions={{ maxCount: 1 }} />
     </BrowserRouter>
   );
 }

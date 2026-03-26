@@ -54,38 +54,26 @@ export default function Dashboard() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    labels: {
-                        color: '#4a5568',
-                        font: {
-                            family: 'Inter',
-                            size: 12,
-                            weight: 600
-                        },
-                        padding: 20,
-                        usePointStyle: true,
-                        pointStyle: 'circle'
-                    }
+                    labels: { color: '#4a5568', font: { family: 'Inter', size: 12, weight: 600 }, padding: 20, usePointStyle: true, pointStyle: 'circle' }
                 },
-                tooltip: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    titleColor: '#4a5568',
-                    bodyColor: '#4a5568',
-                    borderColor: 'rgba(255, 255, 255, 0.4)',
-                    borderWidth: 1,
-                    padding: 12,
-                    cornerRadius: 8,
-                    titleFont: {
-                        family: 'Poppins',
-                        size: 14,
-                        weight: 600
-                    },
-                    bodyFont: {
-                        family: 'Inter',
-                        size: 13
-                    }
-                }
+                tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#4a5568', bodyColor: '#4a5568', borderColor: 'rgba(255, 255, 255, 0.4)', borderWidth: 1, padding: 12, cornerRadius: 8 }
             }
         };
+
+        const completedCount = tasks.filter(t => t.status === 'completed' || t.status === 'Completed').length;
+        const progressCount = tasks.filter(t => t.status === 'progress' || t.status === 'In Progress').length;
+        const pendingCount = tasks.filter(t => t.status === 'pending' || t.status === 'Pending').length;
+
+        const monthCounts = { 'Jan': 0, 'Feb': 0, 'Mar': 0, 'Apr': 0, 'May': 0, 'Jun': 0, 'Jul': 0, 'Aug': 0, 'Sep': 0, 'Oct': 0, 'Nov': 0, 'Dec': 0 };
+        tasks.forEach(t => {
+            if (!t.deadline) return;
+            const m = t.deadline.substring(0, 3);
+            if (monthCounts[m] !== undefined && (t.status === 'completed' || t.status === 'Completed')) {
+                monthCounts[m]++;
+            }
+        });
+        const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const dataStats = labels.map(l => monthCounts[l] || 0);
 
         if (taskDistRef.current) {
             taskChart = new Chart(taskDistRef.current, {
@@ -93,24 +81,13 @@ export default function Dashboard() {
                 data: {
                     labels: ['Completed', 'In Progress', 'Pending'],
                     datasets: [{
-                        data: [186, 38, 24],
-                        backgroundColor: [
-                            'rgba(168, 237, 234, 0.8)',
-                            'rgba(166, 193, 238, 0.8)',
-                            'rgba(252, 182, 159, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 255, 255, 0.8)',
-                            'rgba(255, 255, 255, 0.8)',
-                            'rgba(255, 255, 255, 0.8)'
-                        ],
+                        data: [completedCount, progressCount, pendingCount],
+                        backgroundColor: ['rgba(168, 237, 234, 0.8)', 'rgba(166, 193, 238, 0.8)', 'rgba(252, 182, 159, 0.8)'],
+                        borderColor: ['rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.8)'],
                         borderWidth: 3
                     }]
                 },
-                options: {
-                    ...chartOptions,
-                    cutout: '65%'
-                }
+                options: { ...chartOptions, cutout: '65%' }
             });
         }
 
@@ -118,10 +95,10 @@ export default function Dashboard() {
             statsChart = new Chart(completionStatsRef.current, {
                 type: 'bar',
                 data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    labels: labels,
                     datasets: [{
                         label: 'Completed Tasks',
-                        data: [45, 52, 38, 65, 58, 72],
+                        data: dataStats,
                         backgroundColor: 'rgba(168, 237, 234, 0.8)',
                         borderColor: 'rgba(255, 255, 255, 0.8)',
                         borderWidth: 2,
@@ -131,33 +108,8 @@ export default function Dashboard() {
                 options: {
                     ...chartOptions,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                color: '#718096',
-                                font: {
-                                    family: 'Inter',
-                                    size: 11
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.3)',
-                                drawBorder: false
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                color: '#718096',
-                                font: {
-                                    family: 'Inter',
-                                    size: 11,
-                                    weight: 600
-                                }
-                            },
-                            grid: {
-                                display: false
-                            }
-                        }
+                        y: { beginAtZero: true, ticks: { color: '#718096' }, grid: { color: 'rgba(255, 255, 255, 0.3)', drawBorder: false } },
+                        x: { ticks: { color: '#718096' }, grid: { display: false } }
                     }
                 }
             });
@@ -167,7 +119,7 @@ export default function Dashboard() {
             if (taskChart) taskChart.destroy();
             if (statsChart) statsChart.destroy();
         };
-    }, []);
+    }, [tasks]);
 
     const handleAddTask = (e) => {
         e.preventDefault();
@@ -326,51 +278,33 @@ export default function Dashboard() {
                                 <h2 className="section-title">Recent Activity</h2>
                             </div>
                             <div className="activity-list">
-                                <div className="activity-item">
-                                    <div className="activity-avatar">SM</div>
-                                    <div className="activity-content">
-                                        <div className="activity-text">
-                                            <strong>Sarah Miller</strong> completed "User Authentication Module"
+                                {tasks.slice(-5).reverse().map((task, idx) => {
+                                    const assignee = task.assignedTo || task.userName || 'Unassigned';
+                                    const initials = assignee.length > 1 ? assignee.substring(0, 2).toUpperCase() : 'UA';
+                                    const gradients = [
+                                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                                        'linear-gradient(135deg, #ffa726 0%, #fb8c00 100%)',
+                                        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                                    ];
+                                    return (
+                                        <div className="activity-item" key={task.id || idx}>
+                                            <div className="activity-avatar" style={{ background: gradients[idx % gradients.length], color: 'white' }}>
+                                                {initials}
+                                            </div>
+                                            <div className="activity-content">
+                                                <div className="activity-text">
+                                                    <strong>{assignee}</strong> {task.status === 'completed' || task.status === 'Completed' ? 'completed' : task.status === 'progress' || task.status === 'In Progress' ? 'is working on' : 'submitted'} "{task.name}"
+                                                </div>
+                                                <div className="activity-time">Recently</div>
+                                            </div>
                                         </div>
-                                        <div className="activity-time">2 minutes ago</div>
-                                    </div>
-                                </div>
-                                <div className="activity-item">
-                                    <div className="activity-avatar" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>JD</div>
-                                    <div className="activity-content">
-                                        <div className="activity-text">
-                                            <strong>John Doe</strong> updated task status to "In Progress"
-                                        </div>
-                                        <div className="activity-time">15 minutes ago</div>
-                                    </div>
-                                </div>
-                                <div className="activity-item">
-                                    <div className="activity-avatar" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>MJ</div>
-                                    <div className="activity-content">
-                                        <div className="activity-text">
-                                            <strong>Mike Johnson</strong> submitted a new task
-                                        </div>
-                                        <div className="activity-time">1 hour ago</div>
-                                    </div>
-                                </div>
-                                <div className="activity-item">
-                                    <div className="activity-avatar" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>EW</div>
-                                    <div className="activity-content">
-                                        <div className="activity-text">
-                                            <strong>Emily White</strong> commented on "API Integration"
-                                        </div>
-                                        <div className="activity-time">2 hours ago</div>
-                                    </div>
-                                </div>
-                                <div className="activity-item">
-                                    <div className="activity-avatar" style={{ background: 'linear-gradient(135deg, #ffa726 0%, #fb8c00 100%)' }}>DL</div>
-                                    <div className="activity-content">
-                                        <div className="activity-text">
-                                            <strong>David Lee</strong> assigned task to John Doe
-                                        </div>
-                                        <div className="activity-time">3 hours ago</div>
-                                    </div>
-                                </div>
+                                    );
+                                })}
+                                {tasks.length === 0 && (
+                                    <div style={{ color: '#718096', fontStyle: 'italic', padding: '10px' }}>No recent activity to show.</div>
+                                )}
                             </div>
                         </div>
                     </div>

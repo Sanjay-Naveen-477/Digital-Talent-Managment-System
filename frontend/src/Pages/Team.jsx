@@ -1,96 +1,79 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
 import './Team.css';
 
 export default function Team() {
   const role = 'admin';
   const isAdmin = role === 'admin';
 
-  const [teams, setTeams] = useState([
-    {
-      id: 1,
-      name: 'Frontend Team',
-      lead: 'John Doe',
-      status: 'Active',
-      members: [
-        { id: 101, name: 'John Doe', role: 'Lead', assignedTasks: 8, completedTasks: 7 },
-        { id: 102, name: 'Emily Brown', role: 'UI/UX Designer', assignedTasks: 6, completedTasks: 5 },
-        { id: 103, name: 'Alex Smith', role: 'Frontend Dev', assignedTasks: 7, completedTasks: 5 }
-      ],
-      tasks: [
-        { id: 201, title: 'Design landing page', assignee: 'Emily Brown', status: 'Completed' },
-        { id: 202, title: 'Implement auth UI', assignee: 'Alex Smith', status: 'Pending' }
-      ]
-    },
-    {
-      id: 2,
-      name: 'Backend Team',
-      lead: 'Sarah Miller',
-      status: 'Active',
-      members: [
-        { id: 111, name: 'Sarah Miller', role: 'Lead', assignedTasks: 6, completedTasks: 6 },
-        { id: 112, name: 'Mike Johnson', role: 'Senior Backend', assignedTasks: 8, completedTasks: 7 }
-      ],
-      tasks: [
-        { id: 212, title: 'Build API gateway', assignee: 'Mike Johnson', status: 'Pending' },
-        { id: 213, title: 'Database migration', assignee: 'Sarah Miller', status: 'Completed' }
-      ]
-    },
-    {
-      id: 3,
-      name: 'QA Team',
-      lead: 'Karen Lee',
-      status: 'Inactive',
-      members: [
-        { id: 121, name: 'Karen Lee', role: 'Lead', assignedTasks: 3, completedTasks: 3 },
-        { id: 122, name: 'Tom Richards', role: 'QA Engineer', assignedTasks: 6, completedTasks: 6 }
-      ],
-      tasks: [
-        { id: 222, title: 'Write E2E tests', assignee: 'Tom Richards', status: 'Completed' }
-      ]
-    }
-  ]);
+  const [teams, setTeams] = useState([]);
+  const [allTasks, setAllTasks] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sizeFilter, setSizeFilter] = useState('All');
   const [selectedTeamId, setSelectedTeamId] = useState(null);
+  
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [teamForm, setTeamForm] = useState({ name: '', lead: '', status: 'Active' });
-  const [taskForm, setTaskForm] = useState({ title: '', assignee: '', status: 'Pending' });
+  
+  const [taskForm, setTaskForm] = useState({ title: '', assignee: '', status: 'pending' });
   const [memberForm, setMemberForm] = useState({ name: '', role: '' });
+  const [customRole, setCustomRole] = useState(false);
+  
   const [error, setError] = useState('');
+  const [openTaskDropdown, setOpenTaskDropdown] = useState(null);
+  const [teamToDelete, setTeamToDelete] = useState(null);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+
+  useEffect(() => {
+    fetchTeamsAndTasks();
+  }, []);
+
+  const fetchTeamsAndTasks = async () => {
+    try {
+      const [teamsRes, tasksRes] = await Promise.all([
+        axios.get('http://localhost:5000/teams'),
+        axios.get('http://localhost:5000/tasks')
+      ]);
+      if (teamsRes.data.status === 'success') {
+        const robustTeams = teamsRes.data.teams.map(t => ({ ...t, members: t.members || [] }));
+        setTeams(robustTeams);
+      }
+      if (tasksRes.data.status === 'success') setAllTasks(tasksRes.data.tasks);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load data from backend.', { id: 'crud' });
+    }
+  };
 
   const totalTeams = teams.length;
   const totalMembers = teams.reduce((sum, team) => sum + team.members.length, 0);
   const activeTeams = teams.filter((team) => team.status === 'Active').length;
-  const totalTasks = teams.reduce((sum, team) => sum + team.tasks.length, 0);
-  const averageTasksPerTeam = totalTeams ? Math.round(totalTasks / totalTeams) : 0;
+  const totalTeamTasks = allTasks.filter(t => t.teamId).length;
+  const averageTasksPerTeam = totalTeams ? Math.round(totalTeamTasks / totalTeams) : 0;
 
   const filteredTeams = useMemo(() => {
     const key = searchTerm.trim().toLowerCase();
     return teams.filter((team) => {
       const searchMatch =
         !key ||
-        team.name.toLowerCase().includes(key) ||
-        team.lead.toLowerCase().includes(key);
+        team.name?.toLowerCase().includes(key) ||
+        team.lead?.toLowerCase().includes(key);
       const statusMatch = statusFilter === 'All' || team.status === statusFilter;
-      const size = team.members.length;
-      const sizeMatch =
-        sizeFilter === 'All' ||
-        (sizeFilter === 'Small' && size <= 3) ||
-        (sizeFilter === 'Medium' && size >= 4 && size <= 7) ||
-        (sizeFilter === 'Large' && size >= 8);
-      return searchMatch && statusMatch && sizeMatch;
+      return searchMatch && statusMatch;
     });
-  }, [teams, searchTerm, statusFilter, sizeFilter]);
+  }, [teams, searchTerm, statusFilter]);
 
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
+  const selectedTeamTasks = selectedTeam ? allTasks.filter(t => t.teamId === selectedTeam.id) : [];
 
   const handleSelectTeam = (teamId) => {
     setSelectedTeamId((current) => (current === teamId ? null : teamId));
     setError('');
+    setCustomRole(false);
   };
 
   const closeModal = () => {
@@ -106,248 +89,313 @@ export default function Team() {
     setModalOpen(true);
   };
 
-  const saveTeam = () => {
+  const saveTeam = async () => {
     if (!teamForm.name.trim() || !teamForm.lead.trim()) {
-      toast.error('Team name and lead are required.');
+      toast.error('Team name and lead are required.', { id: 'crud' });
       setError('Team name and lead are required.');
       return;
     }
 
-    if (editingTeamId) {
-      setTeams((prev) =>
-        prev.map((team) =>
-          team.id === editingTeamId
-            ? { ...team, name: teamForm.name.trim(), lead: teamForm.lead.trim(), status: teamForm.status }
-            : team
-        )
-      );
-      toast.success('Team updated successfully!');
-    } else {
-      const next = {
-        id: Math.max(0, ...teams.map((t) => t.id)) + 1,
-        ...teamForm,
-        members: [],
-        tasks: []
-      };
-      setTeams((prev) => [...prev, next]);
-      toast.success('Team created successfully!');
+    try {
+      if (editingTeamId) {
+        const teamObj = teams.find(t => t.id === editingTeamId);
+        const payload = { ...teamObj, name: teamForm.name.trim(), lead: teamForm.lead.trim(), status: teamForm.status };
+        await axios.put(`http://localhost:5000/teams/${editingTeamId}`, payload);
+        toast.success('Team updated successfully!', { id: 'crud' });
+      } else {
+        const payload = { ...teamForm, members: [] };
+        await axios.post('http://localhost:5000/teams', payload);
+        toast.success('Team created successfully!', { id: 'crud' });
+      }
+      fetchTeamsAndTasks();
+      setModalOpen(false);
+      setError('');
+    } catch (err) {
+      toast.error('Failed to save team.', { id: 'crud' });
     }
-
-    setModalOpen(false);
-    setError('');
   };
 
-  const deleteTeam = (id) => {
+  const deleteTeam = async (id) => {
     if (!isAdmin) return;
-    if (!window.confirm('Delete this team?')) return;
-    setTeams((prev) => prev.filter((team) => team.id !== id));
-    if (selectedTeamId === id) setSelectedTeamId(null);
-    toast.success('Team deleted successfully!');
+    try {
+      await axios.delete(`http://localhost:5000/teams/${id}`);
+      if (selectedTeamId === id) setSelectedTeamId(null);
+      fetchTeamsAndTasks();
+      setTeamToDelete(null);
+      toast.success('Team deleted successfully!', { id: 'crud' });
+    } catch (err) {
+      toast.error('Failed to delete team.', { id: 'crud' });
+    }
   };
 
-  const addMember = (memberName, memberRole) => {
+  const addMember = async () => {
     if (!selectedTeam || !isAdmin) return;
-    if (!memberName.trim() || !memberRole.trim()) {
-      toast.error('Member name and role are required.');
+    if (!memberForm.name.trim() || !memberForm.role.trim()) {
+      toast.error('Member name and role are required.', { id: 'crud' });
       return;
     }
-    const newMember = { id: Date.now(), name: memberName.trim(), role: memberRole.trim(), assignedTasks: 0, completedTasks: 0 };
-    setTeams((prev) =>
-      prev.map((team) =>
-        team.id === selectedTeam.id ? { ...team, members: [...team.members, newMember] } : team
-      )
-    );
-    toast.success('Member added successfully!');
+    const newMember = { id: Date.now(), name: memberForm.name.trim(), role: memberForm.role.trim(), assignedTasks: 0, completedTasks: 0 };
+    const updatedTeam = { ...selectedTeam, members: [...selectedTeam.members, newMember] };
+    
+    try {
+      await axios.put(`http://localhost:5000/teams/${selectedTeam.id}`, updatedTeam);
+      fetchTeamsAndTasks();
+      setMemberForm({ name: '', role: '' });
+      setCustomRole(false);
+      toast.success('Member added successfully!', { id: 'crud' });
+    } catch (err) {
+      toast.error('Failed to add member.', { id: 'crud' });
+    }
   };
 
-  const deleteMember = (memberId) => {
+  const deleteMember = async (memberId) => {
     if (!selectedTeam || !isAdmin) return;
-    setTeams((prev) =>
-      prev.map((team) =>
-        team.id === selectedTeam.id ? { ...team, members: team.members.filter((m) => m.id !== memberId) } : team
-      )
-    );
-    toast.success('Member removed successfully!');
+    const updatedTeam = { ...selectedTeam, members: selectedTeam.members.filter((m) => m.id !== memberId) };
+    try {
+      await axios.put(`http://localhost:5000/teams/${selectedTeam.id}`, updatedTeam);
+      fetchTeamsAndTasks();
+      toast.success('Member removed successfully!', { id: 'crud' });
+    } catch (err) {
+      toast.error('Failed to remove member.', { id: 'crud' });
+    }
   };
 
-  const addTask = () => {
+  const addTask = async () => {
     if (!selectedTeam || !isAdmin) return;
     if (!taskForm.title.trim() || !taskForm.assignee.trim()) {
-      toast.error('Task title and assignee required.');
+      toast.error('Task title and assignee required.', { id: 'crud' });
       setError('Task title and assignee required.');
       return;
     }
 
-    const newTask = {
-      id: Date.now(),
-      title: taskForm.title.trim(),
-      assignee: taskForm.assignee.trim(),
-      status: taskForm.status
+    const payload = {
+      name: taskForm.title.trim(),
+      assignedTo: taskForm.assignee.trim(),
+      deadline: 'TBD',
+      status: taskForm.status,
+      teamId: selectedTeam.id
     };
 
-    setTeams((prev) =>
-      prev.map((team) =>
-        team.id === selectedTeam.id ? { ...team, tasks: [...team.tasks, newTask] } : team
-      )
-    );
-
-    setTaskForm({ title: '', assignee: '', status: 'Pending' });
-    setError('');
-    toast.success('Task added successfully!');
+    try {
+      await axios.post(`http://localhost:5000/tasks`, payload);
+      fetchTeamsAndTasks();
+      setTaskForm({ title: '', assignee: '', status: 'pending' });
+      setError('');
+      toast.success('Task added successfully!', { id: 'crud' });
+    } catch(err) {
+      toast.error('Failed to add task.', { id: 'crud' });
+    }
   };
 
-  const toggleTaskStatus = (taskId) => {
+  const setTaskStatus = async (taskId, newStatus, taskObj) => {
     if (!selectedTeam || !isAdmin) return;
-    setTeams((prev) =>
-      prev.map((team) =>
-        team.id === selectedTeam.id
-          ? {
-              ...team,
-              tasks: team.tasks.map((task) => {
-                if (task.id === taskId) {
-                  const newStatus = task.status === 'Pending' ? 'Completed' : 'Pending';
-                  toast.success(`Task marked as ${newStatus}!`);
-                  return { ...task, status: newStatus };
-                }
-                return task;
-              })
-            }
-          : team
-      )
-    );
+    const payload = {
+      ...taskObj,
+      status: newStatus
+    };
+    try {
+      await axios.put(`http://localhost:5000/tasks/${taskId}`, payload);
+      fetchTeamsAndTasks();
+      setOpenTaskDropdown(null);
+      toast.success(`Task marked as ${newStatus}!`, { id: 'crud' });
+    } catch(err) {
+      toast.error('Failed to change status.', { id: 'crud' });
+    }
   };
 
-  const completedInSelected = selectedTeam ? selectedTeam.tasks.filter((task) => task.status === 'Completed').length : 0;
-  const selectionPerf = selectedTeam ? (selectedTeam.tasks.length ? Math.round((completedInSelected / selectedTeam.tasks.length) * 100) : 0) : 0;
-  const mostActive = selectedTeam
-    ? selectedTeam.members.reduce((lead, member) => {
-        if (!lead) return member;
-        const memberScore = member.completedTasks + member.assignedTasks;
-        const leadScore = lead.completedTasks + lead.assignedTasks;
-        return memberScore > leadScore ? member : lead;
-      }, null)
-    : null;
+  const deleteTask = async (taskId) => {
+    if (!selectedTeam || !isAdmin) return;
+    try {
+      await axios.delete(`http://localhost:5000/tasks/${taskId}`);
+      fetchTeamsAndTasks();
+      setTaskToDelete(null);
+      setOpenTaskDropdown(null);
+      toast.success('Task deleted successfully!', { id: 'crud' });
+    } catch(err) {
+      toast.error('Failed to delete task.', { id: 'crud' });
+    }
+  };
+
+  const completedInSelected = selectedTeam ? selectedTeamTasks.filter((task) => task.status === 'completed').length : 0;
+  const selectionPerf = selectedTeam ? (selectedTeamTasks.length ? Math.round((completedInSelected / selectedTeamTasks.length) * 100) : 0) : 0;
 
   return (
     <div className="team-container dashboard-page">
-      <h1 className="team-title">👥 🎯 Teams Dashboard</h1>
-
-      <div className="team-overview-cards">
-        <article className="overview-card"><h3>Total Teams</h3><p>{totalTeams}</p></article>
-        <article className="overview-card"><h3>Total Members</h3><p>{totalMembers}</p></article>
-        <article className="overview-card"><h3>Active Teams</h3><p>{activeTeams}</p></article>
-        <article className="overview-card"><h3>Tasks / Team</h3><p>{averageTasksPerTeam}</p></article>
-      </div>
-
-      <div className="team-controls-bar">
-        <input className="team-search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search team name or lead..." />
-        <select className="team-form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="All">All</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
-        <select className="team-form-select" value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)}>
-          <option value="All">All</option>
-          <option value="Small">Small</option>
-          <option value="Medium">Medium</option>
-          <option value="Large">Large</option>
-        </select>
-        {isAdmin && <button className="add-member-btn" onClick={openNewTeam}>➕ Create Team</button>}
-      </div>
-
-      <section className="team-list-section">
-        {filteredTeams.length === 0 ? (
-          <p className="no-members-message">No matching teams found.</p>
-        ) : (
-          <div className="team-cards-grid">
-            {filteredTeams.map((team) => (
-              <article key={team.id} className={`team-card ${selectedTeamId === team.id ? 'selected' : ''}`}>
-                <header>
-                  <h2>{team.name}</h2>
-                  <span className={`status-pill ${team.status.toLowerCase()}`}>{team.status}</span>
-                </header>
-                <p>Lead: <strong>{team.lead}</strong></p>
-                <p>Members: {team.members.length}</p>
-                <p>Active Tasks: {team.tasks.filter((t) => t.status === 'Pending').length}</p>
-                <div className="team-card-actions">
-                  <button type="button" onClick={() => handleSelectTeam(team.id)}>View Team</button>
-                  {isAdmin && <button className="team-delete-btn" onClick={() => deleteTeam(team.id)}>Delete</button>}
-                </div>
-              </article>
-            ))}
+      {!selectedTeam ? (
+        <>
+          <h1 className="team-title">👥 🎯 Teams Dashboard</h1>
+          
+          <div className="team-overview-cards">
+             <article className="overview-card"><h3>Total Teams</h3><p>{totalTeams}</p></article>
+             <article className="overview-card"><h3>Total Members</h3><p>{totalMembers}</p></article>
+             <article className="overview-card"><h3>Active Teams</h3><p>{activeTeams}</p></article>
+             <article className="overview-card"><h3>Tasks / Team</h3><p>{averageTasksPerTeam}</p></article>
           </div>
-        )}
-      </section>
 
-      {selectedTeam && (
-        <section className="team-details">
-          <h2>{selectedTeam.name} Details</h2>
-          <div className="team-detail-grid">
-            <article className="team-detail-card">
-              <h3>Members ({selectedTeam.members.length})</h3>
-              <ul className="team-member-list">
-                {selectedTeam.members.map((member) => (
-                  <li key={member.id}>
-                    <span>{member.name} ({member.role})</span>
-                    <div className="member-stats"><span>Assigned {member.assignedTasks}</span><span>Completed {member.completedTasks}</span></div>
-                    {isAdmin && <button className="team-delete-btn" onClick={() => deleteMember(member.id)}>Remove</button>}
-                  </li>
-                ))}
-              </ul>
-              {isAdmin && (
-                <div className="team-add-member-row">
-                  <input type="text" className="team-form-input" placeholder="Member name" value={memberForm.name} onChange={(e) => setMemberForm((p) => ({ ...p, name: e.target.value }))} />
-                  <input type="text" className="team-form-input" placeholder="Role" value={memberForm.role} onChange={(e) => setMemberForm((p) => ({ ...p, role: e.target.value }))} />
-                  <button type="button" className="add-member-btn" onClick={() => { addMember(memberForm.name, memberForm.role); setMemberForm({ name: '', role: '' }); }}>Add Member</button>
-                </div>
-              )}
-            </article>
+          <div className="team-controls-stack">
+            <input className="team-search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search team name or lead..." />
+            <select className="team-form-select team-full-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="All">All</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+            {isAdmin && (
+              <div className="team-create-action">
+                <button className="add-member-btn" onClick={openNewTeam}>+ Create Team</button>
+              </div>
+            )}
+          </div>
 
-            <article className="team-detail-card">
-              <h3>Tasks</h3>
-              <ul className="task-list">
-                {selectedTeam.tasks.map((task) => (
-                  <li key={task.id} className="task-item">
-                    <div>
-                      <strong>{task.title}</strong>
-                      <p>{task.assignee}</p>
-                      <p>{task.status}</p>
+          <section className="team-list-section">
+            {filteredTeams.length === 0 ? (
+              <p className="no-members-message">No matching teams found.</p>
+            ) : (
+              <div className="team-cards-grid">
+                {filteredTeams.map((team) => (
+                  <article key={team.id} className={`team-card ${selectedTeamId === team.id ? 'selected' : ''}`}>
+                    <header>
+                      <h2>{team.name}</h2>
+                      <span className={`status-pill ${team.status.toLowerCase()}`}>{team.status}</span>
+                    </header>
+                    <p>Lead: <strong>{team.lead}</strong></p>
+                    <p>Members: {team.members?.length || 0}</p>
+                    <p>Active Tasks: {allTasks.filter(t => t.teamId === team.id && t.status !== 'completed').length}</p>
+                    <div className="team-card-actions">
+                      <button type="button" className="btn-view" onClick={() => handleSelectTeam(team.id)}>View Team</button>
+                      {isAdmin && <button className="btn-delete" onClick={() => setTeamToDelete(team.id)}>Delete</button>}
                     </div>
-                    {isAdmin && <button className="team-edit-btn" type="button" onClick={() => toggleTaskStatus(task.id)}>{task.status === 'Pending' ? 'Complete' : 'Reopen'}</button>}
-                  </li>
+                  </article>
                 ))}
-              </ul>
+              </div>
+            )}
+          </section>
+        </>
+      ) : (
+        <section className="ds-view">
+          <header className="ds-header">
+            <button className="ds-back-btn" onClick={() => setSelectedTeamId(null)}>← Back to Teams</button>
+            <h2 className="ds-title">Team {selectedTeam.name} Details</h2>
+          </header>
+
+          <div className="ds-grid">
+            <div className="ds-col ds-members-col">
+              <h3>Members ({selectedTeam.members?.length || 0})</h3>
+              
+              <div className="ds-list ds-member-list">
+                {selectedTeam.members?.map((member) => (
+                  <div key={member.id} className="ds-card ds-member-item">
+                    <div className="ds-m-info">
+                      <span className="ds-m-name">{member.name} ({member.role})</span>
+                    </div>
+                    <div className="ds-m-stats">
+                      <span>Assigned {selectedTeamTasks.filter(t => t.assignedTo === member.name).length} Completed {selectedTeamTasks.filter(t => t.assignedTo === member.name && t.status === 'completed').length}</span>
+                    </div>
+                    {isAdmin && (
+                      <button className="ds-m-remove" onClick={() => deleteMember(member.id)}>Remove</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
               {isAdmin && (
-                <div className="task-form-row">
-                  <input className="team-form-input" placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm((p) => ({ ...p, title: e.target.value }))} />
-                  <input className="team-form-input" placeholder="Assign to" value={taskForm.assignee} onChange={(e) => setTaskForm((p) => ({ ...p, assignee: e.target.value }))} />
-                  <select className="team-form-select" value={taskForm.status} onChange={(e) => setTaskForm((p) => ({ ...p, status: e.target.value }))}>
-                    <option value="Pending">Pending</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                  <button type="button" className="add-member-btn" onClick={addTask}>Add Task</button>
+                <div className="ds-add-row ds-add-member">
+                  <input type="text" className="ds-input" placeholder="Member name" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} />
+                  {customRole ? (
+                     <div style={{display: 'flex', gap: '4px', flex: 1}}>
+                       <input type="text" className="ds-input" placeholder="Custom Role" value={memberForm.role} onChange={e => setMemberForm({...memberForm, role: e.target.value})} style={{flex: 1}}/>
+                       <button className="ds-btn-secondary" onClick={() => {setCustomRole(false); setMemberForm({...memberForm, role: ''});}} style={{padding: '0 8px'}}>✕</button>
+                     </div>
+                  ) : (
+                    <select className="ds-select" value={memberForm.role} onChange={(e) => {
+                      if (e.target.value === 'CUSTOM') setCustomRole(true);
+                      else setMemberForm({ ...memberForm, role: e.target.value });
+                    }}>
+                      <option value="" disabled>Role</option>
+                      <option value="Frontend">Frontend</option>
+                      <option value="Backend">Backend</option>
+                      <option value="Design">Design</option>
+                      <option value="QA">QA</option>
+                      <option value="Lead">Lead</option>
+                      <option value="CUSTOM">+ Add Custom</option>
+                    </select>
+                  )}
+                  <button className="ds-btn-primary ds-btn-member" onClick={addMember}>Add Member</button>
                 </div>
               )}
-            </article>
+            </div>
 
-            <article className="team-detail-card">
-              <h3>Analytics</h3>
-              <p>Tasks Completed: {completedInSelected} / {selectedTeam.tasks.length}</p>
-              <p>Performance: {selectionPerf}%</p>
-              <p>Most Active Member: {mostActive ? mostActive.name : 'N/A'}</p>
-            </article>
+            <div className="ds-col ds-tasks-wrap">
+              <div className="ds-tasks-col">
+                <h3>Tasks</h3>
+                
+                <div className="ds-list ds-task-list">
+                  {selectedTeamTasks.map((task) => (
+                    <div key={task.id} className="ds-card ds-task-item">
+                      <div className="ds-t-icon">
+                        <div className="ds-t-icon-inner"></div>
+                      </div>
+                      <div className="ds-t-content">
+                        <strong>{task.name}</strong>
+                        <span>{task.assignedTo}</span><br />
+                        <span className="ds-t-status ds-capitalize">{task.status}</span>
+                      </div>
+                      <div className="ds-t-status-container">
+                        <div className="ds-t-arrow" onClick={(e) => { e.stopPropagation(); setOpenTaskDropdown(openTaskDropdown === task.id ? null : task.id); }} style={{ cursor: 'pointer' }}>›</div>
+                        {openTaskDropdown === task.id && (
+                          <div className="ds-task-status-dropdown">
+                            <button onClick={() => setTaskStatus(task.id, 'pending', task)}>Pending</button>
+                            <button onClick={() => setTaskStatus(task.id, 'progress', task)}>In Progress</button>
+                            <button onClick={() => setTaskStatus(task.id, 'completed', task)}>Completed</button>
+                            <button onClick={() => setTaskToDelete(task.id)} style={{color: '#ef4444', borderTop: '1px solid #f3f4f6', marginTop: '4px', paddingTop: '8px'}}>Delete</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {isAdmin && (
+                  <div className="ds-add-row ds-add-task">
+                    <input type="text" className="ds-input ds-input-wide" placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} />
+                    <select className="ds-select" value={taskForm.assignee} onChange={(e) => setTaskForm({ ...taskForm, assignee: e.target.value })}>
+                      <option value="" disabled>Assign to</option>
+                      {selectedTeam.members?.map(m => (
+                        <option key={m.id} value={m.name}>{m.name}</option>
+                      ))}
+                    </select>
+                    <select className="ds-select" value={taskForm.status} onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}>
+                      <option value="pending">Pending</option>
+                      <option value="progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                    <button className="ds-btn-primary" onClick={addTask}>Add</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="ds-analytics-col">
+                <h3>Analytics</h3>
+                <ul className="ds-analytics-list">
+                  <li>Tasks Completed: {completedInSelected} / {selectedTeamTasks.length}</li>
+                  <li>Performance: {selectionPerf}%</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </section>
       )}
 
       {isModalOpen && (
-        <div className="team-modal-overlay" onClick={closeModal}>
-          <div className="team-modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2 className="team-modal-title">{editingTeamId ? 'Edit Team' : 'Create Team'}</h2>
+        <div className="team-modal-overlay ds-blur-overlay" onClick={closeModal}>
+          <div className="team-modal-content ds-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="team-modal-header">
+              <h2 className="team-modal-title">{editingTeamId ? 'Edit Team' : 'Create Team'}</h2>
+              <button className="team-modal-close" onClick={closeModal}>×</button>
+            </div>
             {error && <p className="team-error-message">{error}</p>}
-            <input className="team-form-input" value={teamForm.name} placeholder="Team name" onChange={(e) => setTeamForm((p) => ({ ...p, name: e.target.value }))} />
-            <input className="team-form-input" value={teamForm.lead} placeholder="Team lead" onChange={(e) => setTeamForm((p) => ({ ...p, lead: e.target.value }))} />
-            <select className="team-form-select" value={teamForm.status} onChange={(e) => setTeamForm((p) => ({ ...p, status: e.target.value }))}>
+            <input className="team-form-input" value={teamForm.name} placeholder="Team name" onChange={(e) => setTeamForm((p) => ({ ...p, name: e.target.value }))} style={{ marginBottom: '10px' }} />
+            <input className="team-form-input" value={teamForm.lead} placeholder="Team lead" onChange={(e) => setTeamForm((p) => ({ ...p, lead: e.target.value }))} style={{ marginBottom: '10px' }} />
+            <select className="team-form-select" value={teamForm.status} onChange={(e) => setTeamForm((p) => ({ ...p, status: e.target.value }))} style={{ marginBottom: '20px' }}>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
@@ -356,6 +404,32 @@ export default function Team() {
               <button className="team-submit-btn" type="button" onClick={saveTeam}>Save</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {teamToDelete && (
+        <div className="team-modal-overlay ds-blur-overlay" onClick={() => setTeamToDelete(null)}>
+           <div className="team-modal-content ds-modal" onClick={e => e.stopPropagation()} style={{textAlign: 'center', maxWidth: '400px', margin: 'auto'}}>
+               <h3 style={{marginBottom: '10px'}}>Delete Team</h3>
+               <p style={{marginBottom: '20px', color: '#4b5563'}}>Are you sure you want to permanently delete <strong>{teams.find(t=>t.id===teamToDelete)?.name}</strong>?</p>
+               <div className="team-modal-buttons" style={{justifyContent: 'center', gap: '15px'}}>
+                  <button className="team-cancel-btn" onClick={() => setTeamToDelete(null)}>Cancel</button>
+                  <button className="ds-btn-primary" style={{backgroundColor: '#ef4444'}} onClick={() => deleteTeam(teamToDelete)}>Delete</button>
+               </div>
+           </div>
+        </div>
+      )}
+
+      {taskToDelete && (
+         <div className="team-modal-overlay ds-blur-overlay" onClick={() => setTaskToDelete(null)}>
+           <div className="team-modal-content ds-modal" onClick={e => e.stopPropagation()} style={{textAlign: 'center', maxWidth: '400px', margin: 'auto'}}>
+               <h3 style={{marginBottom: '10px'}}>Delete Task</h3>
+               <p style={{marginBottom: '20px', color: '#4b5563'}}>Are you sure you want to delete this task?</p>
+               <div className="team-modal-buttons" style={{justifyContent: 'center', gap: '15px'}}>
+                  <button className="team-cancel-btn" onClick={() => setTaskToDelete(null)}>Cancel</button>
+                  <button className="ds-btn-primary" style={{backgroundColor: '#ef4444'}} onClick={() => deleteTask(taskToDelete)}>Delete</button>
+               </div>
+           </div>
         </div>
       )}
     </div>

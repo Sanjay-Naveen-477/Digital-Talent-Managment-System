@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import './Tasks.css';
 
 const API_URL = "http://localhost:5000";
@@ -107,9 +108,10 @@ export default function Tasks() {
       const newTasks = tasks.filter(task => !selectedTasks.has(task.id));
       setTasks(newTasks);
       setSelectedTasks(new Set());
+      toast.success('Tasks deleted successfully', { id: 'crud' });
     } catch (err) {
       console.error("Failed to delete tasks", err);
-      alert("Failed to delete selected tasks");
+      toast.error('Failed to delete selected tasks', { id: 'crud' });
     }
   };
 
@@ -121,9 +123,10 @@ export default function Tasks() {
         const newSelected = new Set(selectedTasks);
         newSelected.delete(id);
         setSelectedTasks(newSelected);
+        toast.success('Task deleted successfully', { id: 'crud' });
       } catch (err) {
         console.error("Failed to delete task", err);
-        alert("Failed to delete task");
+        toast.error('Failed to delete task', { id: 'crud' });
       }
     }
   };
@@ -141,12 +144,14 @@ export default function Tasks() {
           setTasks(tasks.map(task =>
             task.id === editingId ? { ...task, ...response.data.task } : task
           ));
+          toast.success('Task updated successfully', { id: 'crud' });
         }
         setEditingId(null);
       } else {
         const response = await axios.post(`${API_URL}/tasks`, formData);
         if (response.data.status === "success") {
           setTasks([...tasks, response.data.task]);
+          toast.success('Task added successfully', { id: 'crud' });
         }
       }
 
@@ -258,7 +263,12 @@ export default function Tasks() {
                     style={styles.checkbox}
                   />
                 </td>
-                <td style={styles.taskNameCell}>{task.name}</td>
+                <td style={styles.taskNameCell}>
+                  {task.name}
+                  {task.teamId && (
+                    <span style={{fontSize: '11px', backgroundColor: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', color: '#4338ca', marginLeft: '6px', whiteSpace: 'nowrap'}}>Team Task</span>
+                  )}
+                </td>
                 <td style={styles.assignedToCell}>{task.assignedTo}</td>
                 <td style={styles.deadlineCell}>{task.deadline}</td>
                 <td style={styles.statusCell}>

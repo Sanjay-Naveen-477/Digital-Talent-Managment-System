@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import axios from 'axios';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -27,115 +28,163 @@ ChartJS.register(
   LineElement
 );
 
-// --- MOCK DATA ---
-const SUMMARY_METRICS = {
-  totalTasks: 124,
-  completedTasks: 82,
-  pendingTasks: 42,
-  completionRate: 66,
+const defaultSummary = {
+  totalTasks: 0,
+  completedTasks: 0,
+  pendingTasks: 0,
+  completionRate: 0,
 };
 
-const INSIGHTS = [
-  { icon: '🏆', text: 'Most productive user: Sanjay', trend: 'up' },
-  { icon: '⚠️', text: 'Tasks delayed: 5 (High Priority)', trend: 'down' },
-  { icon: '📈', text: 'Completion rate increased by 12% this week', trend: 'up' },
+const defaultInsights = [
+  { icon: 'ℹ️', text: 'Loading insights...', trend: 'up' }
 ];
 
-const USER_PERFORMANCE = [
-  { id: 1, name: 'Sanjay', assigned: 45, completed: 38, rate: 84, status: 'Active' },
-  { id: 2, name: 'Anita', assigned: 30, completed: 25, rate: 83, status: 'Active' },
-  { id: 3, name: 'Rahul', assigned: 25, completed: 10, rate: 40, status: 'Low Performance' },
-  { id: 4, name: 'Priya', assigned: 24, completed: 9, rate: 37, status: 'Low Performance' },
-];
+const defaultUserPerformance = [];
+const defaultTaskReports = [];
+const defaultActivityTimeline = [];
 
-const TASK_REPORTS = [
-  { id: 'T-101', name: 'Design Onboarding Flow', assignee: 'Sanjay', deadline: '2026-03-25', status: 'Completed', priority: 'High' },
-  { id: 'T-102', name: 'Database Migration', assignee: 'Rahul', deadline: '2026-03-22', status: 'Delayed', priority: 'Critical' },
-  { id: 'T-103', name: 'Update Dashboard UI', assignee: 'Anita', deadline: '2026-03-28', status: 'In Progress', priority: 'Medium' },
-  { id: 'T-104', name: 'Fix Login Bug', assignee: 'Priya', deadline: '2026-03-24', status: 'Pending', priority: 'High' },
-  { id: 'T-105', name: 'Create API Docs', assignee: 'Sanjay', deadline: '2026-03-30', status: 'In Progress', priority: 'Low' },
-];
-
-const ACTIVITY_TIMELINE = [
-  { id: 1, time: '2 hours ago', type: 'completion', text: 'Sanjay completed "Design Onboarding Flow"' },
-  { id: 2, time: '5 hours ago', type: 'late', text: 'Rahul missed deadline for "Database Migration"' },
-  { id: 3, time: 'Yesterday', type: 'new', text: 'New task "Fix Login Bug" assigned to Priya' },
-];
-
-// --- CHART DATA CONFIG ---
-const pieChartData = {
-  labels: ['Completed', 'In Progress', 'Pending/Delayed'],
-  datasets: [
-    {
-      data: [82, 27, 15],
-      backgroundColor: ['#10b981', '#6366f1', '#f43f5e'],
-      borderWidth: 0,
-      hoverOffset: 4
-    },
-  ],
-};
-
-const barChartData = {
-  labels: ['Sanjay', 'Anita', 'Rahul', 'Priya'],
-  datasets: [
-    {
-      label: 'Tasks Completed',
-      data: [38, 25, 10, 9],
-      backgroundColor: '#4f46e5',
-      borderRadius: 4,
-    },
-    {
-      label: 'Tasks Assigned',
-      data: [45, 30, 25, 24],
-      backgroundColor: '#e0e7ff',
-      borderRadius: 4,
-    }
-  ],
-};
-
-const lineChartData = {
-  labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-  datasets: [
-    {
-      label: 'Task Completions',
-      data: [5, 9, 14, 12, 22, 10, 10],
-      borderColor: '#10b981',
-      backgroundColor: 'rgba(16, 185, 129, 0.1)',
-      fill: true,
-      tension: 0.4, // smooth curves
-    }
-  ]
-};
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: { font: { family: "'Inter', sans-serif" } }
-    }
-  }
-};
-
-const barOptions = {
-  ...chartOptions,
-  scales: {
-    x: { grid: { display: false } },
-    y: { grid: { borderDash: [4, 4] } }
-  }
-};
 
 export default function Reports() {
+  const [summaryMetrics, setSummaryMetrics] = useState(defaultSummary);
+  const [insights, setInsights] = useState(defaultInsights);
+  const [userPerformance, setUserPerformance] = useState(defaultUserPerformance);
+  const [taskReports, setTaskReports] = useState(defaultTaskReports);
+  const [activityTimeline, setActivityTimeline] = useState(defaultActivityTimeline);
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterUser, setFilterUser] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Simple filtering logic
-  const filteredTasks = TASK_REPORTS.filter(task => {
-    if (filterStatus !== 'All' && task.status !== filterStatus) return false;
-    if (filterUser !== 'All' && task.assignee !== filterUser) return false;
-    return true;
-  });
+  useEffect(() => {
+    async function fetchReports() {
+      try {
+        setLoading(true);
+        const response = await axios.get('http://localhost:5000/reports');
+        if (response.data.status === 'success' && response.data.data) {
+          const payload = response.data.data;
+          setSummaryMetrics(payload.summary);
+          setInsights(payload.insights);
+          setUserPerformance(payload.userPerformance);
+          setTaskReports(payload.taskReports);
+          setActivityTimeline(payload.activityTimeline);
+          setError('');
+        } else {
+          setError('Unable to load reports from backend.');
+        }
+      } catch (err) {
+        setError('Unable to fetch reports. Please check backend connection.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchReports();
+  }, []);
+
+  const filteredTasks = useMemo(() => {
+    return taskReports.filter(task => {
+      if (filterStatus !== 'All' && task.status !== filterStatus) return false;
+      if (filterUser !== 'All' && task.assignee !== filterUser) return false;
+      return true;
+    });
+  }, [taskReports, filterStatus, filterUser]);
+
+  const pieChartData = useMemo(() => ({
+    labels: ['Completed', 'In Progress', 'Pending/Delayed'],
+    datasets: [
+      {
+        data: [
+          summaryMetrics.completedTasks,
+          Math.max(summaryMetrics.totalTasks - summaryMetrics.completedTasks - summaryMetrics.pendingTasks, 0),
+          summaryMetrics.pendingTasks
+        ],
+        backgroundColor: ['#10b981', '#6366f1', '#f43f5e'],
+        borderWidth: 0,
+        hoverOffset: 4
+      }
+    ]
+  }), [summaryMetrics]);
+
+  const barChartData = useMemo(() => ({
+    labels: userPerformance.map((u) => u.name),
+    datasets: [
+      {
+        label: 'Tasks Completed',
+        data: userPerformance.map((u) => u.completed),
+        backgroundColor: '#4f46e5',
+        borderRadius: 4,
+      },
+      {
+        label: 'Tasks Assigned',
+        data: userPerformance.map((u) => u.assigned),
+        backgroundColor: '#e0e7ff',
+        borderRadius: 4,
+      }
+    ]
+  }), [userPerformance]);
+
+  const lineChartData = useMemo(() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const timelineByDay = days.map((day) => ({ day, completed: 0 }));
+
+    activityTimeline.forEach((event) => {
+      const created = new Date(event.time);
+      const dayName = created.toLocaleDateString('en-US', { weekday: 'short' });
+      const idx = days.indexOf(dayName);
+      if (idx >= 0 && event.type === 'completion') {
+        timelineByDay[idx].completed += 1;
+      }
+    });
+
+    return {
+      labels: days,
+      datasets: [
+        {
+          label: 'Task Completions',
+          data: timelineByDay.map((day) => day.completed),
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          tension: 0.4,
+        }
+      ]
+    };
+  }, [activityTimeline]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { font: { family: "'Inter', sans-serif" } }
+      }
+    }
+  };
+
+  const barOptions = {
+    ...chartOptions,
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { borderDash: [4, 4] } }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="reports-container dashboard-page">
+        <p>Loading reports...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="reports-container dashboard-page">
+        <p className="text-muted">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="reports-container dashboard-page">
@@ -155,35 +204,35 @@ export default function Reports() {
           <div className="metric-icon blue">📋</div>
           <div className="metric-content">
             <p className="metric-label">Total Tasks</p>
-            <h2 className="metric-value">{SUMMARY_METRICS.totalTasks}</h2>
+            <h2 className="metric-value">{summaryMetrics.totalTasks}</h2>
           </div>
         </div>
         <div className="metric-card">
           <div className="metric-icon green">✅</div>
           <div className="metric-content">
             <p className="metric-label">Completed Tasks</p>
-            <h2 className="metric-value">{SUMMARY_METRICS.completedTasks}</h2>
+            <h2 className="metric-value">{summaryMetrics.completedTasks}</h2>
           </div>
         </div>
         <div className="metric-card">
           <div className="metric-icon orange">⏳</div>
           <div className="metric-content">
             <p className="metric-label">Pending Tasks</p>
-            <h2 className="metric-value">{SUMMARY_METRICS.pendingTasks}</h2>
+            <h2 className="metric-value">{summaryMetrics.pendingTasks}</h2>
           </div>
         </div>
         <div className="metric-card">
           <div className="metric-icon purple">📈</div>
           <div className="metric-content">
             <p className="metric-label">Completion Rate</p>
-            <h2 className="metric-value">{SUMMARY_METRICS.completionRate}%</h2>
+            <h2 className="metric-value">{summaryMetrics.completionRate}%</h2>
           </div>
         </div>
       </section>
 
       {/* 7. Insights / Highlights */}
       <section className="insights-container">
-        {INSIGHTS.map((insight, idx) => (
+        {insights.map((insight, idx) => (
           <div className="insight-card" key={idx}>
             <span className="insight-icon">{insight.icon}</span>
             <span className="insight-text">{insight.text}</span>
@@ -235,7 +284,7 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {USER_PERFORMANCE.map(user => (
+                  {userPerformance.map(user => (
                     <tr key={user.id}>
                       <td className="fw-500">{user.name}</td>
                       <td>{user.assigned}</td>
@@ -278,12 +327,10 @@ export default function Reports() {
                   onChange={(e) => setFilterUser(e.target.value)}
                 >
                   <option value="All">All Users</option>
-                  <option value="Sanjay">Sanjay</option>
-                  <option value="Anita">Anita</option>
-                  <option value="Rahul">Rahul</option>
-                  <option value="Priya">Priya</option>
+                  {userPerformance.map(u => (
+                    <option key={u.name} value={u.name}>{u.name}</option>
+                  ))}
                 </select>
-                
                 <select 
                   className="filter-input"
                   value={filterStatus}
@@ -346,7 +393,7 @@ export default function Reports() {
         <aside className="timeline-sidebar">
           <h3>Activity Timeline</h3>
           <div className="timeline-container">
-            {ACTIVITY_TIMELINE.map(item => (
+            {activityTimeline.map(item => (
               <div className="timeline-item" key={item.id}>
                 <div className={`timeline-dot t-${item.type}`}></div>
                 <div className="timeline-content">

@@ -3,6 +3,7 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from functools import wraps
 from bson import ObjectId
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -83,37 +84,141 @@ def get_tasks():
     for t in tasks_col.find():
         t["id"] = str(t["_id"])
         del t["_id"]
+        t["createdAt"] = t.get("createdAt").isoformat() if t.get("createdAt") else None
+        t["updatedAt"] = t.get("updatedAt").isoformat() if t.get("updatedAt") else None
         tasks.append(t)
     return jsonify({"status": "success", "tasks": tasks})
+
+
+@app.route("/reports", methods=["GET"])
+def get_reports():
+    tasks = list(tasks_col.find())
+    total_tasks = len(tasks)
+    completed_tasks = sum(1 for t in tasks if t.get("status", "").lower() == "completed")
+    pending_tasks = sum(1 for t in tasks if t.get("status", "").lower() in ["pending", "in progress"])
+    delayed_tasks = 0
+    now = datetime.utcnow()
+    for t in tasks:
+        deadline_str = t.get("deadline")
+        status = t.get("status", "").lower()
+        if deadline_str and status != "completed":
+            try:
+                deadline = datetime.fromisoformat(deadline_str)
+                if deadline < now:
+                    delayed_tasks += 1
+            except ValueError:
+                pass
+
+    completion_rate = round((completed_tasks / total_tasks * 100), 2) if total_tasks else 0
+
+    # User performance
+    user_perf_map = {}
+    for t in tasks:
+        user = t.get("assignedTo", "Unassigned")
+        if user not in user_perf_map:
+            user_perf_map[user] = {"assigned": 0, "completed": 0}
+        user_perf_map[user]["assigned"] += 1
+        if t.get("status", "").lower() == "completed":
+            user_perf_map[user]["completed"] += 1
+
+    user_performance = []
+    for i, (user, vals) in enumerate(sorted(user_perf_map.items(), key=lambda x: -x[1]["completed"]), start=1):
+        assigned = vals["assigned"]
+        completed = vals["completed"]
+        rate = round((completed / assigned * 100), 0) if assigned else 0
+        status = "Active" if rate >= 70 else "Low Performance"
+        user_performance.append({"id": i, "name": user, "assigned": assigned, "completed": completed, "rate": rate, "status": status})
+
+    most_productive = max(user_performance, key=lambda x: x["completed"], default={"name": "N/A", "rate": 0})
+
+    insights = [
+        {"icon": "🏆", "text": f"Most productive user: {most_productive['name']}", "trend": "up"},
+        {"icon": "⚠️", "text": f"Tasks delayed: {delayed_tasks}", "trend": "down" if delayed_tasks > 0 else "up"},
+        {"icon": "📈", "text": f"Completion rate: {completion_rate}%", "trend": "up"}
+    ]
+
+    # Activity timeline - from latest task updates
+    timeline = []
+    sorted_tasks = sorted(tasks, key=lambda t: t.get("updatedAt", datetime.min), reverse=True)
+    for t in sorted_tasks[:8]:
+        state = t.get("status", "pending")
+        text = f"{t.get('assignedTo', 'Unknown')} changed '{t.get('name', 'task')}' to {state.capitalize()}"
+        age = t.get("updatedAt")
+        if isinstance(age, datetime):
+            age_text = age.strftime("%Y-%m-%d %H:%M")
+        else:
+            age_text = str(age)
+        timeline.append({"id": str(t.get("_id", "")), "time": age_text, "type": "completion" if state == 'completed' else ('late' if state == 'delayed' else 'new'), "text": text})
+
+    task_reports = []
+    for t in tasks:
+        task_reports.append({
+            "id": str(t.get("_id", "")),
+            "name": t.get("name", ""),
+            "assignee": t.get("assignedTo", ""),
+            "deadline": t.get("deadline", ""),
+            "status": t.get("status", ""),
+            "priority": t.get("priority", "Medium")
+        })
+
+    data = {
+        "summary": {
+            "totalTasks": total_tasks,
+            "completedTasks": completed_tasks,
+            "pendingTasks": pending_tasks,
+            "completionRate": completion_rate
+        },
+        "insights": insights,
+        "userPerformance": user_performance,
+        "taskReports": task_reports,
+        "activityTimeline": timeline
+    }
+
+    return jsonify({"status": "success", "data": data})
 
 @app.route("/tasks", methods=["POST"])
 def add_task():
     data = request.json
+    now = datetime.utcnow()
     new_task = {
         "name": data.get("name"),
         "assignedTo": data.get("assignedTo"),
         "deadline": data.get("deadline"),
         "status": data.get("status", "pending"),
-        "user": data.get("assignedTo", "").lower().split(' ')[0]
+        "user": data.get("assignedTo", "").lower().split(' ')[0],
+        "createdAt": now,
+        "updatedAt": now
     }
     result = tasks_col.insert_one(new_task)
-    new_task["id"] = str(result.inserted_id)
-    del new_task["_id"]
-    return jsonify({"status": "success", "task": new_task})
+    task_doc = tasks_col.find_one({"_id": result.inserted_id})
+    task_doc["id"] = str(task_doc["_id"])
+    del task_doc["_id"]
+    # convert datetimes to strings for JSON output
+    task_doc["createdAt"] = task_doc["createdAt"].isoformat()
+    task_doc["updatedAt"] = task_doc["updatedAt"].isoformat()
+    return jsonify({"status": "success", "task": task_doc})
 
 @app.route("/tasks/<task_id>", methods=["PUT"])
 def update_task(task_id):
     data = request.json
+    now = datetime.utcnow()
     update_data = {
         "name": data.get("name"),
         "assignedTo": data.get("assignedTo"),
         "deadline": data.get("deadline"),
         "status": data.get("status"),
-        "user": data.get("assignedTo", "").lower().split(' ')[0]
+        "user": data.get("assignedTo", "").lower().split(' ')[0],
+        "updatedAt": now
     }
     tasks_col.update_one({"_id": ObjectId(task_id)}, {"$set": update_data})
-    update_data["id"] = task_id
-    return jsonify({"status": "success", "task": update_data})
+
+    task_doc = tasks_col.find_one({"_id": ObjectId(task_id)})
+    task_doc["id"] = str(task_doc["_id"])
+    del task_doc["_id"]
+    task_doc["createdAt"] = task_doc.get("createdAt").isoformat() if task_doc.get("createdAt") else None
+    task_doc["updatedAt"] = task_doc.get("updatedAt").isoformat() if task_doc.get("updatedAt") else None
+
+    return jsonify({"status": "success", "task": task_doc})
 
 @app.route("/tasks/<task_id>", methods=["DELETE"])
 def delete_task(task_id):
@@ -166,7 +271,7 @@ def update_team(team_id):
         "tasks": data.get("tasks", [])
     }
     teams_col.update_one({"_id": ObjectId(team_id)}, {"$set": update_data})
-    update_data["id"] = task_id if "task_id" in locals() and "task_id" != None else team_id
+    update_data["id"] = team_id
     return jsonify({"status": "success", "team": update_data})
 
 @app.route("/teams/<team_id>", methods=["DELETE"])
