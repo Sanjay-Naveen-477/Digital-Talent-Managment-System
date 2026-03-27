@@ -23,7 +23,7 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 20%, #fbc2eb 40%, #a6c1ee 60%, #a8edea 80%, #fed6e3 100%);
     background-size: 400% 400%;
-    animation: gradientShift 5s ease infinite;
+   
     background-attachment: fixed;
     color: var(--text-primary);
     overflow-x: hidden;
