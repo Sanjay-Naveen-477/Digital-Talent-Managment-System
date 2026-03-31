@@ -15,12 +15,19 @@ export default function Tasks() {
   const [formData, setFormData] = useState({
     name: '',
     assignedTo: '',
+    status: 'pending',
     deadline: '',
-    status: 'pending'
+    tags: '',
+    description: ''
   });
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const role = localStorage.getItem('userRole') || 'user';
+  const isAdmin = role === 'admin';
+  const apiHeaders = { headers: { 'X-User-Role': role } };
 
   const fetchTasks = async () => {
     try {
@@ -81,6 +88,23 @@ export default function Tasks() {
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const openTaskModal = (task) => {
+    setSelectedTask(task);
+    setIsModalOpen(true);
+  };
+
+  const closeTaskModal = () => {
+    setSelectedTask(null);
+    setIsModalOpen(false);
+  };
+
   const handleSelectTask = (id) => {
     const newSelected = new Set(selectedTasks);
     if (newSelected.has(id)) {
@@ -104,7 +128,7 @@ export default function Tasks() {
     
     try {
       const idsToDelete = Array.from(selectedTasks);
-      await axios.post(`${API_URL}/tasks/delete_batch`, { ids: idsToDelete });
+      await axios.post(`${API_URL}/tasks/delete_batch`, { ids: idsToDelete }, apiHeaders);
       const newTasks = tasks.filter(task => !selectedTasks.has(task.id));
       setTasks(newTasks);
       setSelectedTasks(new Set());
@@ -118,7 +142,7 @@ export default function Tasks() {
   const handleDeleteTask = async (id) => {
     if (confirm('Are you sure you want to delete this task?')) {
       try {
-        await axios.delete(`${API_URL}/tasks/${id}`);
+        await axios.delete(`${API_URL}/tasks/${id}`, apiHeaders);
         setTasks(tasks.filter(task => task.id !== id));
         const newSelected = new Set(selectedTasks);
         newSelected.delete(id);
@@ -132,14 +156,27 @@ export default function Tasks() {
   };
 
   const handleAddTask = async () => {
-    if (!formData.name || !formData.assignedTo || !formData.deadline) {
-      setError('Please fill all fields');
+    if (!formData.name.trim() || !formData.assignedTo.trim() || !formData.deadline.trim() || !formData.description.trim() || !formData.tags.trim()) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+    if (Number.isNaN(Date.parse(formData.deadline))) {
+      setError('Please enter a valid due date.');
       return;
     }
 
+    const payload = {
+      name: formData.name.trim(),
+      assignedTo: formData.assignedTo.trim(),
+      status: formData.status,
+      deadline: new Date(formData.deadline).toISOString(),
+      tags: formData.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+      description: formData.description.trim()
+    };
+
     try {
       if (editingId) {
-        const response = await axios.put(`${API_URL}/tasks/${editingId}`, formData);
+        const response = await axios.put(`${API_URL}/tasks/${editingId}`, payload, apiHeaders);
         if (response.data.status === "success") {
           setTasks(tasks.map(task =>
             task.id === editingId ? { ...task, ...response.data.task } : task
@@ -148,14 +185,14 @@ export default function Tasks() {
         }
         setEditingId(null);
       } else {
-        const response = await axios.post(`${API_URL}/tasks`, formData);
+        const response = await axios.post(`${API_URL}/tasks`, payload, apiHeaders);
         if (response.data.status === "success") {
           setTasks([...tasks, response.data.task]);
           toast.success('Task added successfully', { id: 'crud' });
         }
       }
 
-      setFormData({ name: '', assignedTo: '', deadline: '', status: 'pending' });
+      setFormData({ name: '', assignedTo: '', status: 'pending', deadline: '', tags: '', description: '' });
       setIsAddModalOpen(false);
       setError('');
     } catch (err) {
@@ -168,8 +205,10 @@ export default function Tasks() {
     setFormData({
       name: task.name,
       assignedTo: task.assignedTo,
-      deadline: task.deadline,
-      status: task.status
+      status: task.status,
+      deadline: task.deadline ? task.deadline.split('T')[0] : '',
+      tags: Array.isArray(task.tags) ? task.tags.join(', ') : (task.tags || ''),
+      description: task.description || ''
     });
     setEditingId(task.id);
     setIsAddModalOpen(true);
@@ -178,7 +217,7 @@ export default function Tasks() {
   const handleCloseModal = () => {
     setIsAddModalOpen(false);
     setEditingId(null);
-    setFormData({ name: '', assignedTo: '', deadline: '', status: 'pending' });
+    setFormData({ name: '', assignedTo: '', status: 'pending' });
     setError('');
   };
 
@@ -216,7 +255,7 @@ export default function Tasks() {
         </div>
 
         <div style={styles.buttonGroup}>
-          {selectedTasks.size > 0 && (
+          {isAdmin && selectedTasks.size > 0 && (
             <button
               onClick={handleDeleteSelected}
               style={{ ...styles.deleteButton, marginRight: '10px' }}
@@ -224,12 +263,14 @@ export default function Tasks() {
               Delete Selected ({selectedTasks.size})
             </button>
           )}
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            style={styles.addButton}
-          >
-            + Add Task
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              style={styles.addButton}
+            >
+              + Add Task
+            </button>
+          )}
         </div>
       </div>
 
@@ -237,17 +278,22 @@ export default function Tasks() {
         <table style={styles.table}>
           <thead>
             <tr style={styles.headerRow}>
-              <th style={styles.checkboxCell}>
-                <input
-                  type="checkbox"
-                  checked={selectedTasks.size === filteredTasks.length && filteredTasks.length > 0}
-                  onChange={handleSelectAll}
-                  style={styles.checkbox}
-                />
-              </th>
+              {isAdmin && (
+                <th style={styles.checkboxCell}>
+                  <input
+                    type="checkbox"
+                    checked={selectedTasks.size === filteredTasks.length && filteredTasks.length > 0}
+                    onChange={handleSelectAll}
+                    style={styles.checkbox}
+                  />
+                </th>
+              )}
               <th style={styles.taskNameCell}>TASK NAME</th>
+              <th style={styles.descriptionCell}>DESCRIPTION</th>
               <th style={styles.assignedToCell}>ASSIGNED TO</th>
-              <th style={styles.deadlineCell}>DEADLINE</th>
+              <th style={styles.dateCell}>CREATED</th>
+              <th style={styles.dateCell}>DUE DATE</th>
+              <th style={styles.tagsCell}>TAGS</th>
               <th style={styles.statusCell}>STATUS</th>
               <th style={styles.actionsCell}>ACTIONS</th>
             </tr>
@@ -255,22 +301,27 @@ export default function Tasks() {
           <tbody>
             {filteredTasks.map((task) => (
               <tr key={task.id} style={styles.bodyRow}>
-                <td style={styles.checkboxCell}>
-                  <input
-                    type="checkbox"
-                    checked={selectedTasks.has(task.id)}
-                    onChange={() => handleSelectTask(task.id)}
-                    style={styles.checkbox}
-                  />
-                </td>
+                {isAdmin && (
+                  <td style={styles.checkboxCell}>
+                    <input
+                      type="checkbox"
+                      checked={selectedTasks.has(task.id)}
+                      onChange={() => handleSelectTask(task.id)}
+                      style={styles.checkbox}
+                    />
+                  </td>
+                )}
                 <td style={styles.taskNameCell}>
                   {task.name}
                   {task.teamId && (
                     <span style={{fontSize: '11px', backgroundColor: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', color: '#4338ca', marginLeft: '6px', whiteSpace: 'nowrap'}}>Team Task</span>
                   )}
                 </td>
+                <td style={styles.descriptionCell}>{task.description ? `${task.description.slice(0, 80)}${task.description.length > 80 ? '...' : ''}` : 'No description'}</td>
                 <td style={styles.assignedToCell}>{task.assignedTo}</td>
-                <td style={styles.deadlineCell}>{task.deadline}</td>
+                <td style={styles.dateCell}>{formatDate(task.createdAt)}</td>
+                <td style={styles.dateCell}>{formatDate(task.deadline)}</td>
+                <td style={styles.tagsCell}>{Array.isArray(task.tags) ? task.tags.join(', ') : (task.tags || '-')}</td>
                 <td style={styles.statusCell}>
                   <span style={{
                     ...styles.statusBadge,
@@ -283,24 +334,51 @@ export default function Tasks() {
                 </td>
                 <td style={styles.actionsCell}>
                   <button
-                    onClick={() => handleEditTask(task)}
-                    style={styles.editButton}
-                    title="Edit"
+                    onClick={() => openTaskModal(task)}
+                    style={styles.viewButton}
+                    title="View"
                   >
-                    ✎
+                    👁
                   </button>
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    style={styles.deleteIconButton}
-                    title="Delete"
-                  >
-                    🗑
-                  </button>
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={() => handleEditTask(task)}
+                        style={styles.editButton}
+                        title="Edit"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        style={styles.deleteIconButton}
+                        title="Delete"
+                      >
+                        🗑
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {isModalOpen && selectedTask && (
+          <div style={styles.modalOverlay} onClick={closeTaskModal}>
+            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <h2 style={styles.modalTitle}>{selectedTask.name}</h2>
+              <p style={styles.modalText}><strong>Description:</strong> {selectedTask.description || 'No description provided.'}</p>
+              <p style={styles.modalText}><strong>Assigned To:</strong> {selectedTask.assignedTo || 'Unassigned'}</p>
+              <p style={styles.modalText}><strong>Status:</strong> {getStatusLabel(selectedTask.status)}</p>
+              <p style={styles.modalText}><strong>Created:</strong> {formatDate(selectedTask.createdAt)}</p>
+              <p style={styles.modalText}><strong>Due Date:</strong> {formatDate(selectedTask.deadline)}</p>
+              <p style={styles.modalText}><strong>Tags:</strong> {Array.isArray(selectedTask.tags) ? selectedTask.tags.join(', ') : (selectedTask.tags || 'None')}</p>
+              <div style={styles.modalButtons}>
+                <button onClick={closeTaskModal} style={styles.cancelButton}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
         {filteredTasks.length === 0 && (
           <div style={styles.noData}>No tasks found</div>
         )}
@@ -338,13 +416,33 @@ export default function Tasks() {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Deadline</label>
+              <label style={styles.label}>Due Date</label>
               <input
-                type="text"
+                type="date"
                 value={formData.deadline}
                 onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                placeholder="e.g., Mar 25, 2026"
                 style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Tags / Category</label>
+              <input
+                type="text"
+                value={formData.tags}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                placeholder="Frontend, Bug, AI, Urgent"
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Task Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter a short description of the task"
+                style={{ ...styles.input, minHeight: '80px' }}
               />
             </div>
 
@@ -482,7 +580,21 @@ const styles = {
     fontSize: '14px',
     color: '#4b5563'
   },
-  deadlineCell: {
+  descriptionCell: {
+    padding: '15px 15px',
+    maxWidth: '240px',
+    color: '#4b5563',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  dateCell: {
+    padding: '15px 15px',
+    fontSize: '14px',
+    color: '#4b5563',
+    textAlign: 'center'
+  },
+  tagsCell: {
     padding: '15px 15px',
     fontSize: '14px',
     color: '#4b5563'
@@ -514,6 +626,20 @@ const styles = {
     border: '1px solid #e5e7eb',
     backgroundColor: 'white',
     color: '#3b82f6',
+    fontSize: '16px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  viewButton: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '6px',
+    border: '1px solid #e5e7eb',
+    backgroundColor: 'white',
+    color: '#111827',
     fontSize: '16px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
@@ -571,6 +697,11 @@ const styles = {
     fontWeight: '600',
     color: '#1a202c',
     marginBottom: '20px'
+  },
+  modalText: {
+    marginBottom: '12px',
+    color: '#4b5563',
+    lineHeight: '1.6'
   },
   formGroup: {
     marginBottom: '20px'

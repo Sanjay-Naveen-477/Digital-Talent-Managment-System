@@ -68,6 +68,9 @@ function Login() {
       });
 
       if (res.data.status === "success") {
+        localStorage.setItem("userRole", res.data.role || "user");
+        localStorage.setItem("userName", res.data.name || email);
+        localStorage.setItem("userEmail", res.data.email || email);
         navigate("/dashboard");
       } else {
         setErrorMsg("Invalid login credentials.");
@@ -109,6 +112,9 @@ function Login() {
                 });
 
                 if (res.data.status === "success") {
+                  localStorage.setItem("userRole", res.data.role || "user");
+                  localStorage.setItem("userName", res.data.name || decoded.name || '');
+                  localStorage.setItem("userEmail", res.data.email || decoded.email || '');
                   navigate("/dashboard");
                 }
               } catch (err) {

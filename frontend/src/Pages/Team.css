@@ -261,6 +261,119 @@
   font-size: 16px;
 }
 
+.ds-task-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 20px;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+}
+
+.ds-task-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+.ds-task-table th,
+.ds-task-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+  color: #374151;
+  font-size: 13px;
+}
+
+.ds-task-table thead th {
+  background-color: #f9fafb;
+  color: #6b7280;
+  font-weight: 700;
+  text-align: left;
+  letter-spacing: 0.03em;
+}
+
+.ds-task-row:hover {
+  background-color: #f8f5ff;
+}
+
+.ds-task-actions {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ds-task-action-btn {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 10px;
+  color: #1f2937;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ds-task-action-btn:hover {
+  border-color: #8b5cf6;
+  background-color: #f8f4ff;
+}
+
+.ds-task-status-dropdown {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  z-index: 10;
+  width: 190px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background-color: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.ds-task-status-dropdown button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 10px 8px;
+  color: #374151;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.ds-task-status-dropdown button:hover {
+  background-color: #f3f4f6;
+}
+
+.ds-add-row.ds-add-task {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.ds-input,
+.ds-add-row.ds-add-task .ds-select {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  padding: 10px 14px;
+  background: #ffffff;
+}
+
+.ds-input:focus,
+.ds-add-row.ds-add-task .ds-select:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
 /* Modal Styles */
 .team-modal-overlay {
   position: fixed;

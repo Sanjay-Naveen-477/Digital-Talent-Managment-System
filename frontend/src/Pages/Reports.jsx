@@ -193,9 +193,7 @@ export default function Reports() {
           <h1>System Analytics & Reports</h1>
           <p>Comprehensive overview of task performance and user productivity.</p>
         </div>
-        <button className="btn-export">
-          <span>📥</span> Export Report (PDF/CSV)
-        </button>
+      
       </div>
 
       {/* 1. Top Summary Cards */}
@@ -317,9 +315,7 @@ export default function Reports() {
             <div className="flex-between mb-4">
               <h3>Detailed Task Reports</h3>
               <div className="filters-group">
-                <input type="date" className="filter-input" title="Date Range Start" />
-                <span className="filter-divider">-</span>
-                <input type="date" className="filter-input" title="Date Range End" />
+               
                 
                 <select 
                   className="filter-input"
@@ -351,7 +347,7 @@ export default function Reports() {
                   <tr>
                     <th>Task Name</th>
                     <th>Assigned To</th>
-                    <th>Deadline</th>
+                  
                     <th>Priority</th>
                     <th>Status</th>
                   </tr>
@@ -366,7 +362,7 @@ export default function Reports() {
                           {task.assignee}
                         </div>
                       </td>
-                      <td>{task.deadline}</td>
+                      
                       <td>
                         <span className={`priority-dot p-${task.priority.toLowerCase()}`}></span>
                         {task.priority}

@@ -330,7 +330,7 @@ export default function Dashboard() {
                         </div>
                     </div>
             {/* Floating Action Button */}
-            <button className="fab" onClick={() => setIsModalOpen(true)}>+</button>
+           
         </>
     );
 }

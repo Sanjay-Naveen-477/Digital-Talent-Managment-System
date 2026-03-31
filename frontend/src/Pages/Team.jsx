@@ -4,8 +4,9 @@ import axios from 'axios';
 import './Team.css';
 
 export default function Team() {
-  const role = 'admin';
+  const [role] = useState(() => localStorage.getItem('userRole') || 'user');
   const isAdmin = role === 'admin';
+  const apiHeaders = { headers: { 'X-User-Role': role } };
 
   const [teams, setTeams] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
@@ -19,7 +20,7 @@ export default function Team() {
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [teamForm, setTeamForm] = useState({ name: '', lead: '', status: 'Active' });
   
-  const [taskForm, setTaskForm] = useState({ title: '', assignee: '', status: 'pending' });
+  const [taskForm, setTaskForm] = useState({ title: '', assignee: '', status: 'pending', description: '', dueDate: '', tags: '' });
   const [memberForm, setMemberForm] = useState({ name: '', role: '' });
   const [customRole, setCustomRole] = useState(false);
   
@@ -52,7 +53,7 @@ export default function Team() {
   const totalTeams = teams.length;
   const totalMembers = teams.reduce((sum, team) => sum + team.members.length, 0);
   const activeTeams = teams.filter((team) => team.status === 'Active').length;
-  const totalTeamTasks = allTasks.filter(t => t.teamId).length;
+  const totalTeamTasks = allTasks.filter((t) => t.teamId !== undefined && t.teamId !== null).length;
   const averageTasksPerTeam = totalTeams ? Math.round(totalTeamTasks / totalTeams) : 0;
 
   const filteredTeams = useMemo(() => {
@@ -67,8 +68,19 @@ export default function Team() {
     });
   }, [teams, searchTerm, statusFilter]);
 
-  const selectedTeam = teams.find((t) => t.id === selectedTeamId);
-  const selectedTeamTasks = selectedTeam ? allTasks.filter(t => t.teamId === selectedTeam.id) : [];
+  const taskMatchesTeam = (task, team) => {
+    const hasTeamId = task.teamId !== undefined && task.teamId !== null && task.teamId !== '';
+    if (hasTeamId && String(task.teamId) === String(team.id)) return true;
+    if (!hasTeamId && task.assignedTo) {
+      return team.members?.some(
+        (member) => String(member.name).trim().toLowerCase() === String(task.assignedTo).trim().toLowerCase()
+      );
+    }
+    return false;
+  };
+
+  const selectedTeam = teams.find((t) => String(t.id) === String(selectedTeamId));
+  const selectedTeamTasks = selectedTeam ? allTasks.filter((task) => taskMatchesTeam(task, selectedTeam)) : [];
 
   const handleSelectTeam = (teamId) => {
     setSelectedTeamId((current) => (current === teamId ? null : teamId));
@@ -100,11 +112,11 @@ export default function Team() {
       if (editingTeamId) {
         const teamObj = teams.find(t => t.id === editingTeamId);
         const payload = { ...teamObj, name: teamForm.name.trim(), lead: teamForm.lead.trim(), status: teamForm.status };
-        await axios.put(`http://localhost:5000/teams/${editingTeamId}`, payload);
+        await axios.put(`http://localhost:5000/teams/${editingTeamId}`, payload, apiHeaders);
         toast.success('Team updated successfully!', { id: 'crud' });
       } else {
         const payload = { ...teamForm, members: [] };
-        await axios.post('http://localhost:5000/teams', payload);
+        await axios.post('http://localhost:5000/teams', payload, apiHeaders);
         toast.success('Team created successfully!', { id: 'crud' });
       }
       fetchTeamsAndTasks();
@@ -118,7 +130,7 @@ export default function Team() {
   const deleteTeam = async (id) => {
     if (!isAdmin) return;
     try {
-      await axios.delete(`http://localhost:5000/teams/${id}`);
+      await axios.delete(`http://localhost:5000/teams/${id}`, apiHeaders);
       if (selectedTeamId === id) setSelectedTeamId(null);
       fetchTeamsAndTasks();
       setTeamToDelete(null);
@@ -138,7 +150,7 @@ export default function Team() {
     const updatedTeam = { ...selectedTeam, members: [...selectedTeam.members, newMember] };
     
     try {
-      await axios.put(`http://localhost:5000/teams/${selectedTeam.id}`, updatedTeam);
+      await axios.put(`http://localhost:5000/teams/${selectedTeam.id}`, updatedTeam, apiHeaders);
       fetchTeamsAndTasks();
       setMemberForm({ name: '', role: '' });
       setCustomRole(false);
@@ -152,7 +164,7 @@ export default function Team() {
     if (!selectedTeam || !isAdmin) return;
     const updatedTeam = { ...selectedTeam, members: selectedTeam.members.filter((m) => m.id !== memberId) };
     try {
-      await axios.put(`http://localhost:5000/teams/${selectedTeam.id}`, updatedTeam);
+      await axios.put(`http://localhost:5000/teams/${selectedTeam.id}`, updatedTeam, apiHeaders);
       fetchTeamsAndTasks();
       toast.success('Member removed successfully!', { id: 'crud' });
     } catch (err) {
@@ -170,16 +182,20 @@ export default function Team() {
 
     const payload = {
       name: taskForm.title.trim(),
+      description: taskForm.description.trim() || '',
       assignedTo: taskForm.assignee.trim(),
-      deadline: 'TBD',
+      createdAt: new Date().toISOString(),
+      dueDate: taskForm.dueDate || 'TBD',
+      deadline: taskForm.dueDate || 'TBD',
+      tags: taskForm.tags ? taskForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean) : [],
       status: taskForm.status,
       teamId: selectedTeam.id
     };
 
     try {
-      await axios.post(`http://localhost:5000/tasks`, payload);
+      await axios.post(`http://localhost:5000/tasks`, payload, apiHeaders);
       fetchTeamsAndTasks();
-      setTaskForm({ title: '', assignee: '', status: 'pending' });
+      setTaskForm({ title: '', assignee: '', status: 'pending', description: '', dueDate: '', tags: '' });
       setError('');
       toast.success('Task added successfully!', { id: 'crud' });
     } catch(err) {
@@ -194,7 +210,7 @@ export default function Team() {
       status: newStatus
     };
     try {
-      await axios.put(`http://localhost:5000/tasks/${taskId}`, payload);
+      await axios.put(`http://localhost:5000/tasks/${taskId}`, payload, apiHeaders);
       fetchTeamsAndTasks();
       setOpenTaskDropdown(null);
       toast.success(`Task marked as ${newStatus}!`, { id: 'crud' });
@@ -206,7 +222,7 @@ export default function Team() {
   const deleteTask = async (taskId) => {
     if (!selectedTeam || !isAdmin) return;
     try {
-      await axios.delete(`http://localhost:5000/tasks/${taskId}`);
+      await axios.delete(`http://localhost:5000/tasks/${taskId}`, apiHeaders);
       fetchTeamsAndTasks();
       setTaskToDelete(null);
       setOpenTaskDropdown(null);
@@ -259,7 +275,7 @@ export default function Team() {
                     </header>
                     <p>Lead: <strong>{team.lead}</strong></p>
                     <p>Members: {team.members?.length || 0}</p>
-                    <p>Active Tasks: {allTasks.filter(t => t.teamId === team.id && t.status !== 'completed').length}</p>
+                    <p>Active Tasks: {allTasks.filter((task) => taskMatchesTeam(task, team) && task.status !== 'completed').length}</p>
                     <div className="team-card-actions">
                       <button type="button" className="btn-view" onClick={() => handleSelectTeam(team.id)}>View Team</button>
                       {isAdmin && <button className="btn-delete" onClick={() => setTeamToDelete(team.id)}>Delete</button>}
@@ -274,7 +290,7 @@ export default function Team() {
         <section className="ds-view">
           <header className="ds-header">
             <button className="ds-back-btn" onClick={() => setSelectedTeamId(null)}>← Back to Teams</button>
-            <h2 className="ds-title">Team {selectedTeam.name} Details</h2>
+            <h2 className="ds-title">{selectedTeam.name} Details</h2>
           </header>
 
           <div className="ds-grid">
@@ -288,7 +304,7 @@ export default function Team() {
                       <span className="ds-m-name">{member.name} ({member.role})</span>
                     </div>
                     <div className="ds-m-stats">
-                      <span>Assigned {selectedTeamTasks.filter(t => t.assignedTo === member.name).length} Completed {selectedTeamTasks.filter(t => t.assignedTo === member.name && t.status === 'completed').length}</span>
+                      <span>Assigned {selectedTeamTasks.filter((t) => String(t.assignedTo).trim().toLowerCase() === String(member.name).trim().toLowerCase()).length} Completed {selectedTeamTasks.filter((t) => String(t.assignedTo).trim().toLowerCase() === String(member.name).trim().toLowerCase() && t.status === 'completed').length}</span>
                     </div>
                     {isAdmin && (
                       <button className="ds-m-remove" onClick={() => deleteMember(member.id)}>Remove</button>
@@ -324,63 +340,87 @@ export default function Team() {
               )}
             </div>
 
-            <div className="ds-col ds-tasks-wrap">
-              <div className="ds-tasks-col">
-                <h3>Tasks</h3>
-                
-                <div className="ds-list ds-task-list">
-                  {selectedTeamTasks.map((task) => (
-                    <div key={task.id} className="ds-card ds-task-item">
-                      <div className="ds-t-icon">
-                        <div className="ds-t-icon-inner"></div>
-                      </div>
-                      <div className="ds-t-content">
-                        <strong>{task.name}</strong>
-                        <span>{task.assignedTo}</span><br />
-                        <span className="ds-t-status ds-capitalize">{task.status}</span>
-                      </div>
-                      <div className="ds-t-status-container">
-                        <div className="ds-t-arrow" onClick={(e) => { e.stopPropagation(); setOpenTaskDropdown(openTaskDropdown === task.id ? null : task.id); }} style={{ cursor: 'pointer' }}>›</div>
-                        {openTaskDropdown === task.id && (
-                          <div className="ds-task-status-dropdown">
-                            <button onClick={() => setTaskStatus(task.id, 'pending', task)}>Pending</button>
-                            <button onClick={() => setTaskStatus(task.id, 'progress', task)}>In Progress</button>
-                            <button onClick={() => setTaskStatus(task.id, 'completed', task)}>Completed</button>
-                            <button onClick={() => setTaskToDelete(task.id)} style={{color: '#ef4444', borderTop: '1px solid #f3f4f6', marginTop: '4px', paddingTop: '8px'}}>Delete</button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {isAdmin ? (
+              <div className="ds-col ds-tasks-wrap">
+                <div className="ds-tasks-col">
+                  <h3>Tasks</h3>
 
-                {isAdmin && (
+                  <div className="ds-task-table-wrapper">
+                    <table className="ds-task-table">
+                      <thead>
+                        <tr>
+                          <th>Task Name</th>
+                          <th>Description</th>
+                          <th>Assigned To</th>
+                          <th>Created</th>
+                          <th>Due Date</th>
+                          <th>Tags</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedTeamTasks.map((task) => (
+                          <tr key={task.id} className="ds-task-row">
+                            <td>{task.name}</td>
+                            <td>{task.description || 'No description'}</td>
+                            <td>{task.assignedTo || 'Unassigned'}</td>
+                            <td>{task.createdAt ? new Date(task.createdAt).toLocaleDateString() : 'Unknown'}</td>
+                            <td>{task.dueDate || task.deadline || 'TBD'}</td>
+                            <td>{Array.isArray(task.tags) ? task.tags.join(', ') : task.tags || 'None'}</td>
+                            <td className="ds-t-status ds-capitalize">{task.status}</td>
+                            <td>
+                              <div className="ds-task-actions">
+                                <button className="ds-task-action-btn" onClick={() => setOpenTaskDropdown(openTaskDropdown === task.id ? null : task.id)}>Status</button>
+                                {openTaskDropdown === task.id && (
+                                  <div className="ds-task-status-dropdown">
+                                    <button onClick={() => setTaskStatus(task.id, 'pending', task)}>Pending</button>
+                                    <button onClick={() => setTaskStatus(task.id, 'progress', task)}>In Progress</button>
+                                    <button onClick={() => setTaskStatus(task.id, 'completed', task)}>Completed</button>
+                                    <button onClick={() => setTaskToDelete(task.id)} style={{ color: '#ef4444', borderTop: '1px solid #f3f4f6', marginTop: '4px', paddingTop: '8px' }}>Delete</button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {selectedTeamTasks.length === 0 && (
+                      <p className="no-members-message">No tasks are currently assigned to this team.</p>
+                    )}
+                  </div>
+
                   <div className="ds-add-row ds-add-task">
                     <input type="text" className="ds-input ds-input-wide" placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} />
+                    <input type="text" className="ds-input ds-input-wide" placeholder="Description" value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} />
                     <select className="ds-select" value={taskForm.assignee} onChange={(e) => setTaskForm({ ...taskForm, assignee: e.target.value })}>
                       <option value="" disabled>Assign to</option>
-                      {selectedTeam.members?.map(m => (
+                      {selectedTeam.members?.map((m) => (
                         <option key={m.id} value={m.name}>{m.name}</option>
                       ))}
                     </select>
+                    <input type="date" className="ds-input" value={taskForm.dueDate} onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} />
+                    <input type="text" className="ds-input" placeholder="Tags (comma separated)" value={taskForm.tags} onChange={(e) => setTaskForm({ ...taskForm, tags: e.target.value })} />
                     <select className="ds-select" value={taskForm.status} onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}>
                       <option value="pending">Pending</option>
                       <option value="progress">In Progress</option>
                       <option value="completed">Completed</option>
                     </select>
-                    <button className="ds-btn-primary" onClick={addTask}>Add</button>
+                    <button className="ds-btn-primary" onClick={addTask}>Add Task</button>
                   </div>
-                )}
-              </div>
+                </div>
 
-              <div className="ds-analytics-col">
-                <h3>Analytics</h3>
-                <ul className="ds-analytics-list">
-                  <li>Tasks Completed: {completedInSelected} / {selectedTeamTasks.length}</li>
-                  <li>Performance: {selectionPerf}%</li>
-                </ul>
+                <div className="ds-analytics-col">
+                  <h3>Analytics</h3>
+                  <ul className="ds-analytics-list">
+                    <li>Tasks Completed: {completedInSelected} / {selectedTeamTasks.length}</li>
+                    <li>Performance: {selectionPerf}%</li>
+                  </ul>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </section>
       )}

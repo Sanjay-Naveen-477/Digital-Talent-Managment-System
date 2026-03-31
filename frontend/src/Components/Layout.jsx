@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Toaster } from 'react-hot-toast';
 import '../Dashboard/Dashboard.css';
 
 export default function Layout() {
     const [isSidebarActive, setIsSidebarActive] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [name, setName] = useState('Guest');
+    const [role, setRole] = useState('User');
     const location = useLocation();
+
+    useEffect(() => {
+        setName(localStorage.getItem('userName') || 'Guest');
+        setRole(localStorage.getItem('userRole') || 'User');
+    }, []);
 
     const toggleUserMenu = () => {
         alert('User menu toggle (Demo)');
@@ -90,8 +96,8 @@ export default function Layout() {
                             <div className="user-profile" onClick={toggleUserMenu}>
                                 <div className="user-avatar">SM</div>
                                 <div className="user-info">
-                                    <div className="user-name">Sarah Miller</div>
-                                    <div className="user-role">Admin</div>
+                                    <div className="user-name">{name}</div>
+                                    <div className="user-role">{role}</div>
                                 </div>
                             </div>
                         </div>
@@ -99,7 +105,6 @@ export default function Layout() {
                     <Outlet context={{ searchTerm }} />
                 </main>
             </div>
-            <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
         </div>
     );
 }

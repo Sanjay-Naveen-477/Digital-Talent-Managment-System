@@ -1,19 +1,187 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import './Settings.css';
+
+const API_URL = 'http://localhost:5000';
 
 const TABS = [
   { id: 'profile', icon: '👤', label: 'Profile Settings' },
   { id: 'security', icon: '🔐', label: 'Security Settings' },
   { id: 'roles', icon: '🎭', label: 'Role & Permissions' },
   { id: 'notifications', icon: '🔔', label: 'Notification Settings' },
-  { id: 'tasks', icon: '📊', label: 'Task Preferences' },
-  { id: 'privacy', icon: '🗂️', label: 'Data & Privacy' },
-  { id: 'admin', icon: '🏢', label: 'Admin Settings' },
+  
 
 ];
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
+  const [profile, setProfile] = useState({
+    name: '',
+    email: '',
+    role: 'User',
+    bio: '',
+    picture: ''
+  });
+  const [uploadError, setUploadError] = useState('');
+  const [saveMessage, setSaveMessage] = useState('');
+  const [securityForm, setSecurityForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [securityError, setSecurityError] = useState('');
+  const [securityMessage, setSecurityMessage] = useState('');
+
+  useEffect(() => {
+    const email = localStorage.getItem('userEmail') || '';
+    const role = localStorage.getItem('userRole') || 'User';
+    if (!email) {
+      setProfile((prev) => ({ ...prev, role }));
+      return;
+    }
+
+    const loadProfile = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/profile`, { params: { email } });
+        if (response.data.status === 'success') {
+          const { name, email: serverEmail, role: serverRole, bio, picture } = response.data.user;
+          setProfile({
+            name: name || '',
+            email: serverEmail || email,
+            role: serverRole || role,
+            bio: bio || '',
+            picture: picture || localStorage.getItem('userProfilePicture') || ''
+          });
+        } else {
+          setProfile((prev) => ({ ...prev, email, role }));
+        }
+      } catch (err) {
+        setProfile((prev) => ({ ...prev, email, role }));
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  const handleProfileChange = (field, value) => {
+    setProfile((prev) => ({ ...prev, [field]: value }));
+    if (field === 'email' || field === 'name') setUploadError('');
+  };
+
+  const handlePictureChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError('Only JPG, PNG, and GIF files are allowed.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError('Profile picture must be smaller than 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProfile((prev) => ({ ...prev, picture: reader.result }));
+      setUploadError('');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const validateEmail = (value) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profile.name.trim() || !profile.email.trim()) {
+      setUploadError('Name and email are required.');
+      return;
+    }
+    if (!validateEmail(profile.email.trim())) {
+      setUploadError('Please enter a valid email address.');
+      return;
+    }
+
+    try {
+      const currentEmail = localStorage.getItem('userEmail') || profile.email;
+      const response = await axios.put(`${API_URL}/profile`, {
+        currentEmail,
+        name: profile.name.trim(),
+        email: profile.email.trim(),
+        bio: profile.bio,
+        picture: profile.picture
+      });
+
+      if (response.data.status === 'success') {
+        localStorage.setItem('userName', profile.name.trim());
+        localStorage.setItem('userEmail', profile.email.trim());
+        localStorage.setItem('userProfilePicture', profile.picture || '');
+        localStorage.setItem('userBio', profile.bio || '');
+        setUploadError('');
+        setSaveMessage('Profile saved successfully.');
+        toast.success('Profile updated successfully');
+        setTimeout(() => setSaveMessage(''), 3000);
+      } else {
+        setUploadError(response.data.message || 'Unable to save profile.');
+      }
+    } catch (err) {
+      setUploadError('Failed to save profile to server.');
+    }
+  };
+
+  const handleSecurityChange = (field, value) => {
+    setSecurityForm((prev) => ({ ...prev, [field]: value }));
+    setSecurityError('');
+    setSecurityMessage('');
+  };
+
+  const handleChangePassword = async () => {
+    const { currentPassword, newPassword, confirmPassword } = securityForm;
+
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+      setSecurityError('Please fill in all password fields.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setSecurityError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setSecurityError('New password and confirm password must match.');
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setSecurityError('New password must be different from current password.');
+      return;
+    }
+
+    try {
+      const email = localStorage.getItem('userEmail');
+      if (!email) {
+        setSecurityError('Unable to identify the logged-in user.');
+        return;
+      }
+
+      const response = await axios.put(`${API_URL}/change-password`, {
+        email,
+        currentPassword,
+        newPassword
+      });
+
+      if (response.data.status === 'success') {
+        setSecurityMessage('Password updated successfully.');
+        setSecurityForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setSecurityError('');
+      } else {
+        setSecurityError(response.data.message || 'Unable to update password.');
+      }
+    } catch (err) {
+      setSecurityError(err.response?.data?.message || 'Failed to change password.');
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -24,24 +192,59 @@ export default function Settings() {
             <p className="settings-subtitle">Manage your basic account details.</p>
             <div className="settings-form">
               <div className="form-group profile-upload">
-                <div className="profile-placeholder">👤</div>
-                <button className="btn-secondary">Upload Picture</button>
+                <div className="profile-placeholder">
+                  {profile.picture ? (
+                    <img src={profile.picture} alt="Profile" className="profile-preview" />
+                  ) : (
+                    '👤'
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="profileUpload" className="btn-secondary">Upload Picture</label>
+                  <input
+                    id="profileUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePictureChange}
+                    style={{ display: 'none' }}
+                  />
+                  {uploadError && <p className="upload-error">{uploadError}</p>}
+                </div>
               </div>
               <div className="form-group">
                 <label>Full Name</label>
-                <input type="text" placeholder="John Doe" />
+                <input
+                  type="text"
+                  placeholder="John Doe"
+                  value={profile.name}
+                  onChange={(e) => handleProfileChange('name', e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Email Address</label>
-                <input type="email" placeholder="john@example.com" />
+                <input
+                  type="email"
+                  placeholder="john@example.com"
+                  value={profile.email}
+                  onChange={(e) => handleProfileChange('email', e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Role</label>
+                <input type="text" value={profile.role} disabled />
               </div>
               <div className="form-group">
                 <label>Bio / Role</label>
-                <textarea placeholder="Tell us about yourself..."></textarea>
+                <textarea
+                  placeholder="Tell us about yourself..."
+                  value={profile.bio}
+                  onChange={(e) => handleProfileChange('bio', e.target.value)}
+                ></textarea>
               </div>
               <div className="form-actions">
-                <button className="btn-primary">Save Changes</button>
+                <button className="btn-primary" type="button" onClick={handleSaveProfile}>Save Changes</button>
               </div>
+              {saveMessage && <div className="success-message">{saveMessage}</div>}
             </div>
           </div>
         );
@@ -53,30 +256,37 @@ export default function Settings() {
             <div className="settings-card">
               <h3>Change Password</h3>
               <div className="form-group">
-                <input type="password" placeholder="Current Password" />
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  placeholder="Current Password"
+                  value={securityForm.currentPassword}
+                  onChange={(e) => handleSecurityChange('currentPassword', e.target.value)}
+                />
               </div>
               <div className="form-group">
-                <input type="password" placeholder="New Password" />
+                <label>New Password</label>
+                <input
+                  type="password"
+                  placeholder="New Password"
+                  value={securityForm.newPassword}
+                  onChange={(e) => handleSecurityChange('newPassword', e.target.value)}
+                />
               </div>
-              <button className="btn-secondary">Update Password</button>
-            </div>
-            <div className="settings-card">
-              <div className="flex-between">
-                <div>
-                  <h3>Two-Factor Authentication (2FA)</h3>
-                  <p>Add an extra layer of security to your account.</p>
-                </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" />
-                  <span className="slider"></span>
-                </label>
+              <div className="form-group">
+                <label>Confirm New Password</label>
+                <input
+                  type="password"
+                  placeholder="Confirm New Password"
+                  value={securityForm.confirmPassword}
+                  onChange={(e) => handleSecurityChange('confirmPassword', e.target.value)}
+                />
               </div>
+              {securityError && <p className="error-message">{securityError}</p>}
+              {securityMessage && <p className="success-message">{securityMessage}</p>}
+              <button className="btn-secondary" type="button" onClick={handleChangePassword}>Update Password</button>
             </div>
-            <div className="settings-card">
-              <h3>Active Sessions</h3>
-              <p>Logged in on Chrome, Windows (Current)</p>
-              <button className="btn-danger mt-3">Logout from all devices</button>
-            </div>
+
             <div className="settings-card">
               <h3>Account Activity Log</h3>
               <ul className="activity-list">
@@ -86,37 +296,7 @@ export default function Settings() {
             </div>
           </div>
         );
-      case 'roles':
-        return (
-          <div className="settings-section">
-            <h2>Role & Permissions</h2>
-            <p className="settings-subtitle">Manage system access levels.</p>
-            <div className="settings-card highlight-card">
-              <h3>Current Role: <span className="badge">Admin</span></h3>
-              <p>You have full access to system configurations.</p>
-            </div>
-            <div className="settings-card">
-              <h3>Assign Roles (Admin Only)</h3>
-              <div className="form-group flex-row">
-                <input type="email" placeholder="User email" style={{ flex: 1 }} />
-                <select>
-                  <option>User</option>
-                  <option>Manager</option>
-                  <option>Admin</option>
-                </select>
-                <button className="btn-primary">Assign</button>
-              </div>
-            </div>
-            <div className="settings-card">
-              <h3>Manage Permissions</h3>
-              <div className="permissions-list">
-                <label className="checkbox-label"><input type="checkbox" defaultChecked /> Can create tasks</label>
-                <label className="checkbox-label"><input type="checkbox" defaultChecked /> Can delete users</label>
-                <label className="checkbox-label"><input type="checkbox" /> Can view all reports</label>
-              </div>
-            </div>
-          </div>
-        );
+     
       case 'notifications':
         return (
           <div className="settings-section">
@@ -141,79 +321,9 @@ export default function Settings() {
           </div>
         );
 
-      case 'tasks':
-        return (
-          <div className="settings-section">
-            <h2>Task Preferences</h2>
-            <div className="settings-card">
-              <h3>Default Task Status</h3>
-              <select className="full-width-select">
-                <option>To Do</option>
-                <option>In Progress</option>
-                <option>Under Review</option>
-              </select>
-            </div>
-            <div className="settings-card">
-              <h3>Task Sorting</h3>
-              <select className="full-width-select">
-                <option>Deadline (Closest first)</option>
-                <option>Priority (High first)</option>
-                <option>Date Created (Newest first)</option>
-              </select>
-            </div>
-            <div className="settings-card flex-between">
-              <span>Show Completed Tasks</span>
-              <label className="toggle-switch">
-                <input type="checkbox" />
-                <span className="slider"></span>
-              </label>
-            </div>
-          </div>
-        );
-      case 'privacy':
-        return (
-          <div className="settings-section">
-            <h2>Data & Privacy</h2>
-            <div className="settings-card">
-              <h3>Download User Data</h3>
-              <p>Export all your tasks, activity and profile data.</p>
-              <button className="btn-secondary mt-2">Request Data Export</button>
-            </div>
-            <div className="settings-card">
-              <h3>Privacy Settings</h3>
-              <label className="checkbox-label"><input type="checkbox" defaultChecked /> Make profile visible to teammates</label>
-            </div>
-            <div className="settings-card danger-zone">
-              <h3>Delete Account</h3>
-              <p>Once you delete your account, there is no going back. Please be certain.</p>
-              <button className="btn-danger mt-2">Delete Account</button>
-            </div>
-          </div>
-        );
-      case 'admin':
-        return (
-          <div className="settings-section">
-            <h2>Admin Settings</h2>
-            <div className="settings-card">
-              <h3>Manage Users</h3>
-              <button className="btn-primary mt-2">Open User Directory</button>
-            </div>
-            <div className="settings-card">
-              <h3>System Configurations</h3>
-              <p>Maintenance mode, global announcements.</p>
-              <button className="btn-secondary mt-2">Configure System</button>
-            </div>
-            <div className="settings-card">
-              <h3>Task Categories</h3>
-              <div className="tags-container mt-2">
-                <span className="tag">Development</span>
-                <span className="tag">Marketing</span>
-                <span className="tag">Design</span>
-                <button className="tag add-tag">+ Add</button>
-              </div>
-            </div>
-          </div>
-        );
+     
+       
+    
 
       default:
         return <div>Select a setting category</div>;
