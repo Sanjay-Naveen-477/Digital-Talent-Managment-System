@@ -13,6 +13,15 @@ CORS(app, resources={
 }, supports_credentials=True)
 
 client = MongoClient("mongodb+srv://sanjaynaveen477:sanjay123@cluster0.an0tz.mongodb.net/talent_db?retryWrites=true&w=majority")
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        role = request.headers.get("X-User-Role", "").lower()
+        if role != "admin":
+            return jsonify({"status": "fail", "message": "Admin privileges required."}), 403
+        return f(*args, **kwargs)
+    return wrapper
 db = client["talent_db"]
 users = db["users"]
 tasks_col = db["tasks"]
@@ -33,7 +42,9 @@ def login():
     if user:
         return jsonify({
             "status": "success",
-            "role": user["role"]
+            "role": user.get("role", "user"),
+            "name": user.get("name", ""),
+            "email": user.get("email", "")
         })
     return jsonify({"status": "fail"})
 
@@ -50,10 +61,88 @@ def google_login():
             "email": email,
             "name": name,
             "role": "user",
-            "auth_type": "google"
+            "auth_type": "google",
+            "bio": "",
+            "picture": ""
         })
+        role = "user"
+    else:
+        role = user.get("role", "user")
 
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success", "role": role, "name": name, "email": email})
+
+@app.route("/profile", methods=["GET"])
+def get_profile():
+    email = request.args.get('email')
+    if not email:
+        return jsonify({"status": "fail", "message": "Email is required."}), 400
+
+    user = users.find_one({"email": email})
+    if not user:
+        return jsonify({"status": "fail", "message": "User not found."}), 404
+
+    user_data = {
+        "name": user.get("name", ""),
+        "email": user.get("email", ""),
+        "role": user.get("role", "user"),
+        "bio": user.get("bio", ""),
+        "picture": user.get("picture", "")
+    }
+    return jsonify({"status": "success", "user": user_data})
+
+@app.route("/profile", methods=["PUT"])
+def update_profile():
+    data = request.json
+    current_email = data.get("currentEmail")
+    if not current_email:
+        return jsonify({"status": "fail", "message": "Current email is required."}), 400
+
+    update_payload = {}
+    if data.get("name") is not None:
+        update_payload["name"] = data.get("name")
+    if data.get("email") is not None:
+        update_payload["email"] = data.get("email")
+    if data.get("bio") is not None:
+        update_payload["bio"] = data.get("bio")
+    if data.get("picture") is not None:
+        update_payload["picture"] = data.get("picture")
+
+    if not update_payload:
+        return jsonify({"status": "fail", "message": "No profile fields provided."}), 400
+
+    result = users.update_one({"email": current_email}, {"$set": update_payload})
+    if result.matched_count == 0:
+        return jsonify({"status": "fail", "message": "User not found."}), 404
+
+    user = users.find_one({"email": update_payload.get("email", current_email)})
+    user_data = {
+        "name": user.get("name", ""),
+        "email": user.get("email", ""),
+        "role": user.get("role", "user"),
+        "bio": user.get("bio", ""),
+        "picture": user.get("picture", "")
+    }
+    return jsonify({"status": "success", "user": user_data})
+
+@app.route("/change-password", methods=["PUT"])
+def change_password():
+    data = request.json
+    email = data.get("email")
+    current_password = data.get("currentPassword")
+    new_password = data.get("newPassword")
+
+    if not email or not current_password or not new_password:
+        return jsonify({"status": "fail", "message": "Email, current password, and new password are required."}), 400
+
+    user = users.find_one({"email": email})
+    if not user:
+        return jsonify({"status": "fail", "message": "User not found."}), 404
+
+    if user.get("password") != current_password:
+        return jsonify({"status": "fail", "message": "Current password is incorrect."}), 401
+
+    users.update_one({"email": email}, {"$set": {"password": new_password}})
+    return jsonify({"status": "success", "message": "Password updated successfully."})
 
 @app.route("/signup", methods=["POST"])
 def signup():
@@ -177,14 +266,19 @@ def get_reports():
     return jsonify({"status": "success", "data": data})
 
 @app.route("/tasks", methods=["POST"])
+@admin_required
 def add_task():
     data = request.json
     now = datetime.utcnow()
     new_task = {
         "name": data.get("name"),
         "assignedTo": data.get("assignedTo"),
-        "deadline": data.get("deadline"),
+        "deadline": data.get("dueDate", data.get("deadline")),
+        "dueDate": data.get("dueDate", data.get("deadline")),
+        "teamId": data.get("teamId"),
         "status": data.get("status", "pending"),
+        "tags": data.get("tags", []),
+        "description": data.get("description", ""),
         "user": data.get("assignedTo", "").lower().split(' ')[0],
         "createdAt": now,
         "updatedAt": now
@@ -199,14 +293,19 @@ def add_task():
     return jsonify({"status": "success", "task": task_doc})
 
 @app.route("/tasks/<task_id>", methods=["PUT"])
+@admin_required
 def update_task(task_id):
     data = request.json
     now = datetime.utcnow()
     update_data = {
         "name": data.get("name"),
         "assignedTo": data.get("assignedTo"),
-        "deadline": data.get("deadline"),
+        "deadline": data.get("dueDate", data.get("deadline")),
+        "dueDate": data.get("dueDate", data.get("deadline")),
+        "teamId": data.get("teamId"),
         "status": data.get("status"),
+        "tags": data.get("tags", []),
+        "description": data.get("description", ""),
         "user": data.get("assignedTo", "").lower().split(' ')[0],
         "updatedAt": now
     }
@@ -221,11 +320,13 @@ def update_task(task_id):
     return jsonify({"status": "success", "task": task_doc})
 
 @app.route("/tasks/<task_id>", methods=["DELETE"])
+@admin_required
 def delete_task(task_id):
     tasks_col.delete_one({"_id": ObjectId(task_id)})
     return jsonify({"status": "success"})
 
 @app.route("/tasks/delete_batch", methods=["POST"])
+@admin_required
 def delete_batch():
     data = request.json
     task_ids = data.get("ids", [])
@@ -246,6 +347,7 @@ def get_teams():
     return jsonify({"status": "success", "teams": teams})
 
 @app.route("/teams", methods=["POST"])
+@admin_required
 def add_team():
     data = request.json
     new_team = {
@@ -261,6 +363,7 @@ def add_team():
     return jsonify({"status": "success", "team": new_team})
 
 @app.route("/teams/<team_id>", methods=["PUT"])
+@admin_required
 def update_team(team_id):
     data = request.json
     update_data = {
@@ -275,6 +378,7 @@ def update_team(team_id):
     return jsonify({"status": "success", "team": update_data})
 
 @app.route("/teams/<team_id>", methods=["DELETE"])
+@admin_required
 def delete_team(team_id):
     teams_col.delete_one({"_id": ObjectId(team_id)})
     return jsonify({"status": "success"})
