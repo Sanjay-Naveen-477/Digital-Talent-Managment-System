@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import '../Dashboard/Dashboard.css';
 
 export default function Layout() {
@@ -7,16 +7,20 @@ export default function Layout() {
     const [searchTerm, setSearchTerm] = useState('');
     const [name, setName] = useState('Guest');
     const [role, setRole] = useState('User');
+    const [picture, setPicture] = useState(null);
     const location = useLocation();
+    const navigate = useNavigate();
 
     useEffect(() => {
-        setName(localStorage.getItem('userName') || 'Guest');
-        setRole(localStorage.getItem('userRole') || 'User');
+        const loadProfile = () => {
+            setName(localStorage.getItem('userName') || 'Guest');
+            setRole(localStorage.getItem('userRole') || 'User');
+            setPicture(localStorage.getItem('userProfilePicture') || null);
+        };
+        loadProfile();
+        window.addEventListener('profileUpdated', loadProfile);
+        return () => window.removeEventListener('profileUpdated', loadProfile);
     }, []);
-
-    const toggleUserMenu = () => {
-        alert('User menu toggle (Demo)');
-    };
 
     return (
         <div className="dashboard-container">
@@ -87,14 +91,17 @@ export default function Layout() {
                             />
                         </div>
                         <div className="top-nav-right">
-                            <div className="icon-btn" onClick={() => setIsSidebarActive(!isSidebarActive)}>
+                            <div className="icon-btn" onClick={() => navigate('/settings', { state: { tab: 'notifications' } })}>
                                 <svg width="20" height="20" fill="none" stroke="white" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
-                                <span className="notification-badge">5</span>
                             </div>
-                            <div className="user-profile" onClick={toggleUserMenu}>
-                                <div className="user-avatar">SM</div>
+                            <div className="user-profile" onClick={() => navigate('/settings', { state: { tab: 'profile' } })} style={{ cursor: 'pointer' }}>
+                                {picture ? (
+                                    <img src={picture} alt="Profile" className="user-avatar-img" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                                ) : (
+                                    <div className="user-avatar">{name.substring(0, 2).toUpperCase()}</div>
+                                )}
                                 <div className="user-info">
                                     <div className="user-name">{name}</div>
                                     <div className="user-role">{role}</div>

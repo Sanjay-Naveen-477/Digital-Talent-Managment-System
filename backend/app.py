@@ -192,10 +192,12 @@ def get_reports():
         status = t.get("status", "").lower()
         if deadline_str and status != "completed":
             try:
-                deadline = datetime.fromisoformat(deadline_str)
+                deadline = datetime.fromisoformat(str(deadline_str).replace("Z", "+00:00"))
+                if deadline.tzinfo is not None:
+                    deadline = deadline.replace(tzinfo=None) - deadline.utcoffset()
                 if deadline < now:
                     delayed_tasks += 1
-            except ValueError:
+            except Exception:
                 pass
 
     completion_rate = round((completed_tasks / total_tasks * 100), 2) if total_tasks else 0

@@ -1,10 +1,8 @@
-.login-page {
+/* login.css */
+
+.space-theme-page {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 20%, #fbc2eb 40%, #a6c1ee 60%, #a8edea 80%, #fed6e3 100%);
-    background-size: 400% 400%;
-    animation: gradientShift 20s ease infinite;
-    background-attachment: fixed;
-    color: #2d3748;
+    color: #f8fafc;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -14,74 +12,132 @@
     overflow: hidden;
 }
 
-.login-page::before {
-    content: '';
-    position: fixed;
+/* Space Background Elements */
+.space-background-gradient {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at 20% 50%, rgba(224, 195, 252, 0.3), transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(168, 237, 234, 0.3), transparent 50%),
-        radial-gradient(circle at 40% 20%, rgba(251, 194, 235, 0.3), transparent 50%);
-    animation: backgroundShift 15s ease-in-out infinite;
+    background: url('./planets-bg.jpg') no-repeat center center;
+    background-size: cover;
+    z-index: -3;
+}
+
+.particles-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+}
+
+
+
+/* Shooting Stars */
+.shooting-stars-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
 }
 
-@keyframes gradientShift {
+.shooting-star {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    width: 2px;
+    height: 2px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 1);
+    animation: shootingStar 4s linear infinite;
+    opacity: 0;
+}
+
+.shooting-star::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 150px;
+    height: 1px;
+    background: linear-gradient(90deg, #ffffff, transparent);
+    right: 0;
+}
+
+@keyframes shootingStar {
     0% {
-        background-position: 0% 50%;
+        transform: rotate(315deg) translateX(0);
+        opacity: 1;
     }
-
-    50% {
-        background-position: 100% 50%;
-    }
-
+    30% { opacity: 1; }
     100% {
-        background-position: 0% 50%;
+        transform: rotate(315deg) translateX(-1500px);
+        opacity: 0;
     }
 }
 
-@keyframes backgroundShift {
+/* Randomize shooting stars */
+.shooting-star:nth-child(1) { top: 10%; left: 90%; animation-delay: 0s; animation-duration: 3s; }
+.shooting-star:nth-child(2) { top: 30%; left: 100%; animation-delay: 1.5s; animation-duration: 4s; }
+.shooting-star:nth-child(3) { top: -10%; left: 50%; animation-delay: 2.7s; animation-duration: 3.5s; }
+.shooting-star:nth-child(4) { top: 20%; left: 80%; animation-delay: 4.1s; animation-duration: 5s; }
+.shooting-star:nth-child(5) { top: -20%; left: 70%; animation-delay: 5.5s; animation-duration: 2.5s; }
+.shooting-star:nth-child(6) { top: 40%; left: 110%; animation-delay: 6.2s; animation-duration: 4.5s; }
+.shooting-star:nth-child(7) { top: 5%; left: 120%; animation-delay: 7.8s; animation-duration: 3s; }
+.shooting-star:nth-child(8) { top: 50%; left: 130%; animation-delay: 8.5s; animation-duration: 3.8s; }
+.shooting-star:nth-child(9) { top: -5%; left: 60%; animation-delay: 9.3s; animation-duration: 4.2s; }
+.shooting-star:nth-child(10) { top: 15%; left: 140%; animation-delay: 10.1s; animation-duration: 3.3s; }
 
-    0%,
-    100% {
-        opacity: 0.5;
-        transform: scale(1);
-    }
 
-    50% {
-        opacity: 0.8;
-        transform: scale(1.1);
-    }
+/* Glass Panel Container */
+.glass-panel {
+    background: rgba(10, 15, 30, 0.4);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(255, 255, 255, 0.05);
 }
 
 .login-container {
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
     border-radius: 24px;
     padding: 3rem;
     width: 100%;
     max-width: 440px;
     position: relative;
-    overflow: hidden;
     z-index: 1;
 }
 
-.login-container::before {
+/* Beautiful Neon accents */
+.login-container::before, .login-container::after {
     content: '';
     position: absolute;
-    top: -50px;
-    right: -50px;
-    width: 150px;
-    height: 150px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.4), transparent 70%);
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
     z-index: -1;
+    filter: blur(60px);
+    opacity: 0.5;
 }
+
+.login-container::before {
+    top: -50px;
+    left: -50px;
+    background: #4ade80; /* Subtle neon green vibe for talent */
+}
+
+.login-container::after {
+    bottom: -50px;
+    right: -50px;
+    background: #3b82f6; /* space blue */
+}
+
 
 .login-logo {
     display: flex;
@@ -94,7 +150,7 @@
 .login-logo-icon {
     width: 50px;
     height: 50px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #22d3ee, #3b82f6);
     border-radius: 14px;
     display: flex;
     align-items: center;
@@ -102,17 +158,18 @@
     font-weight: 700;
     color: white;
     font-size: 1.5rem;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
 }
 
 .login-logo-text {
     font-family: 'Poppins', sans-serif;
     font-weight: 700;
     font-size: 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
 }
 
 .login-header {
@@ -122,14 +179,15 @@
 
 .login-header h2 {
     font-family: 'Poppins', sans-serif;
-    font-size: 1.75rem;
+    font-size: 1.85rem;
     font-weight: 600;
-    color: #1a202c;
+    color: #ffffff;
     margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
 }
 
 .login-header p {
-    color: #4a5568;
+    color: #94a3b8;
     font-size: 0.95rem;
 }
 
@@ -140,19 +198,19 @@
 .form-label {
     display: block;
     margin-bottom: 0.5rem;
-    color: #2d3748;
-    font-weight: 600;
+    color: #cbd5e1;
+    font-weight: 500;
     font-size: 0.9rem;
+    letter-spacing: 0.3px;
 }
 
-.form-input {
+.form-input, .login-modal-content select {
     width: 100%;
     padding: 1rem 1.25rem;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: #2d3748;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
     font-size: 0.95rem;
     transition: all 0.3s ease;
     outline: none;
@@ -160,13 +218,13 @@
 }
 
 .form-input::placeholder {
-    color: #718096;
+    color: #64748b;
 }
 
-.form-input:focus {
-    background: rgba(255, 255, 255, 0.7);
-    border-color: rgba(142, 197, 252, 0.6);
-    box-shadow: 0 0 0 4px rgba(142, 197, 252, 0.2);
+.form-input:focus, .login-modal-content select:focus {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(59, 130, 246, 0.7);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
     transform: translateY(-1px);
 }
 
@@ -174,14 +232,14 @@
     width: 100%;
     padding: 1rem;
     border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
     color: white;
     border: none;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 1.05rem;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
     margin-top: 1rem;
     font-family: 'Inter', sans-serif;
     display: flex;
@@ -198,7 +256,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -209,7 +267,7 @@
 
 .btn-login:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    box-shadow: 0 8px 30px rgba(37, 99, 235, 0.6);
 }
 
 .btn-login:active {
@@ -229,25 +287,26 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #4a5568;
+    color: #cbd5e1;
     cursor: pointer;
 }
 
 .forgot-password {
-    color: #667eea;
+    color: #60a5fa;
     text-decoration: none;
-    font-weight: 600;
-    transition: color 0.2s;
+    font-weight: 500;
+    transition: text-shadow 0.2s, color 0.2s;
 }
 
 .forgot-password:hover {
-    color: #764ba2;
+    color: #93c5fd;
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
 }
 
 .loading-spinner {
     display: inline-block;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border: 3px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     border-top-color: white;
@@ -260,16 +319,15 @@
     }
 }
 
-/* Error message styling */
 .error-message {
-    color: #e53e3e;
-    background: rgba(254, 215, 215, 0.4);
+    color: #fca5a5;
+    background: rgba(153, 27, 27, 0.3);
     padding: 0.75rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
     font-size: 0.85rem;
     text-align: center;
-    border: 1px solid rgba(254, 215, 215, 0.8);
+    border: 1px solid rgba(239, 68, 68, 0.4);
     font-weight: 500;
     animation: fadeIn 0.3s ease;
 }
@@ -279,26 +337,18 @@
         opacity: 0;
         transform: translateY(-10px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-.google-login {
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
-}
-
-/* Or Divider */
 .login-divider {
     display: flex;
     align-items: center;
     text-align: center;
     margin: 1.5rem 0;
-    color: #a0aec0;
+    color: #64748b;
     font-size: 0.9rem;
 }
 
@@ -306,43 +356,41 @@
 .login-divider::after {
     content: '';
     flex: 1;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .login-divider span {
     padding: 0 10px;
 }
 
-/* Signup Prompt */
 .signup-prompt {
     text-align: center;
     margin-top: 2rem;
     font-size: 0.95rem;
-    color: #4a5568;
+    color: #94a3b8;
 }
 
 .signup-link {
-    color: #667eea;
+    color: #60a5fa;
     font-weight: 600;
     cursor: pointer;
     text-decoration: none;
-    transition: color 0.2s;
+    transition: all 0.2s;
 }
 
 .signup-link:hover {
-    color: #764ba2;
-    text-decoration: underline;
+    color: #93c5fd;
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
 }
 
-/* Modal Overlay & Content */
 .login-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(5px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -351,19 +399,24 @@
 }
 
 .login-modal-content {
-    background: white;
-    padding: 2.5rem;
     border-radius: 20px;
+    padding: 2.5rem;
     width: 100%;
     max-width: 440px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-modal-content select option {
+    background: #0f172a;
+    color: #f8fafc;
 }
 
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(30px);
     }
     to {
         opacity: 1;
@@ -382,31 +435,33 @@
     font-family: 'Poppins', sans-serif;
     font-size: 1.5rem;
     margin: 0;
-    color: #2d3748;
+    color: #ffffff;
+    letter-spacing: 0.5px;
 }
 
 .close-btn {
     background: none;
     border: none;
     font-size: 1.8rem;
-    color: #a0aec0;
+    color: #94a3b8;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color 0.2s, transform 0.2s;
 }
 
 .close-btn:hover {
-    color: #4a5568;
+    color: #ffffff;
+    transform: scale(1.1);
 }
 
 .success-message {
-    color: #047857;
-    background: #d1fae5;
+    color: #6ee7b7;
+    background: rgba(6, 78, 59, 0.4);
     padding: 0.75rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
     font-size: 0.85rem;
     text-align: center;
-    border: 1px solid #a7f3d0;
+    border: 1px solid rgba(52, 211, 153, 0.3);
     font-weight: 500;
     animation: fadeIn 0.3s ease;
 }

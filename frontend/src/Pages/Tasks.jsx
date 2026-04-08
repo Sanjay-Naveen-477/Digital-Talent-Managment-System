@@ -65,13 +65,13 @@ export default function Tasks() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return '#22c55e';
+        return '#10b981';
       case 'progress':
-        return '#ec4899';
+        return '#3b82f6';
       case 'pending':
-        return '#f97316';
+        return '#ec4899';
       default:
-        return '#6b7280';
+        return '#cbd5e1';
     }
   };
 
@@ -483,16 +483,16 @@ export default function Tasks() {
 const styles = {
   container: {
     padding: '30px',
-    backgroundColor: '#f0f7ff',
+    backgroundColor: 'transparent',
     minHeight: '100vh',
-    borderRadius: '16px',
     margin: '20px'
   },
   title: {
     fontSize: '28px',
     fontWeight: 'bold',
-    color: '#1a202c',
-    marginBottom: '25px'
+    color: '#f8fafc',
+    marginBottom: '25px',
+    fontFamily: 'Poppins, sans-serif'
   },
   controlsBar: {
     display: 'flex',
@@ -509,9 +509,11 @@ const styles = {
   },
   select: {
     padding: '10px 15px',
-    borderRadius: '8px',
-    border: '1px solid #e5e7eb',
-    backgroundColor: 'white',
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    backdropFilter: 'blur(10px)',
+    color: '#f8fafc',
     fontSize: '14px',
     fontWeight: '500',
     cursor: 'pointer',
@@ -525,31 +527,33 @@ const styles = {
   },
   addButton: {
     padding: '10px 20px',
-    backgroundColor: '#7c3aed',
+    background: 'var(--primary-gradient)',
     color: 'white',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '12px',
     fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
-    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
+    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
   },
   deleteButton: {
     padding: '10px 15px',
-    backgroundColor: '#44ef4f',
+    background: 'var(--secondary-gradient)',
     color: 'white',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '12px',
     fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.3s ease'
   },
   tableContainer: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
     borderRadius: '12px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
     overflow: 'hidden'
   },
   table: {
@@ -557,11 +561,11 @@ const styles = {
     borderCollapse: 'collapse'
   },
   headerRow: {
-    backgroundColor: '#f3f4f6',
-    borderBottom: '2px solid #e5e7eb'
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
   },
   bodyRow: {
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
     transition: 'background-color 0.2s ease'
   },
   checkboxCell: {
@@ -573,17 +577,17 @@ const styles = {
     padding: '15px 20px',
     fontSize: '14px',
     fontWeight: '500',
-    color: '#1a202c'
+    color: '#f8fafc'
   },
   assignedToCell: {
     padding: '15px 15px',
     fontSize: '14px',
-    color: '#4b5563'
+    color: '#cbd5e1'
   },
   descriptionCell: {
     padding: '15px 15px',
     maxWidth: '240px',
-    color: '#4b5563',
+    color: '#94a3b8',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap'
@@ -591,13 +595,13 @@ const styles = {
   dateCell: {
     padding: '15px 15px',
     fontSize: '14px',
-    color: '#4b5563',
+    color: '#cbd5e1',
     textAlign: 'center'
   },
   tagsCell: {
     padding: '15px 15px',
     fontSize: '14px',
-    color: '#4b5563'
+    color: '#94a3b8'
   },
   statusCell: {
     padding: '15px 15px',
@@ -622,10 +626,10 @@ const styles = {
   editButton: {
     width: '32px',
     height: '32px',
-    borderRadius: '6px',
-    border: '1px solid #e5e7eb',
-    backgroundColor: 'white',
-    color: '#3b82f6',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    color: '#60a5fa',
     fontSize: '16px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
@@ -636,10 +640,10 @@ const styles = {
   viewButton: {
     width: '32px',
     height: '32px',
-    borderRadius: '6px',
-    border: '1px solid #e5e7eb',
-    backgroundColor: 'white',
-    color: '#111827',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    color: '#cbd5e1',
     fontSize: '16px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
@@ -650,10 +654,10 @@ const styles = {
   deleteIconButton: {
     width: '32px',
     height: '32px',
-    borderRadius: '6px',
-    border: '1px solid #e5e7eb',
-    backgroundColor: 'white',
-    color: '#ef4444',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: 'rgba(236, 72, 153, 0.2)',
+    color: '#f43f5e',
     fontSize: '16px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
@@ -669,7 +673,7 @@ const styles = {
   noData: {
     padding: '40px',
     textAlign: 'center',
-    color: '#9ca3af',
+    color: '#94a3b8',
     fontSize: '16px'
   },
   modalOverlay: {
@@ -679,28 +683,32 @@ const styles = {
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(5px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000
   },
   modal: {
-    backgroundColor: 'white',
-    borderRadius: '12px',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    backdropFilter: 'blur(30px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    color: '#f8fafc',
+    borderRadius: '20px',
     padding: '30px',
     maxWidth: '500px',
     width: '90%',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)'
   },
   modalTitle: {
     fontSize: '22px',
     fontWeight: '600',
-    color: '#1a202c',
+    color: '#f8fafc',
     marginBottom: '20px'
   },
   modalText: {
     marginBottom: '12px',
-    color: '#4b5563',
+    color: '#cbd5e1',
     lineHeight: '1.6'
   },
   formGroup: {
@@ -710,24 +718,26 @@ const styles = {
     display: 'block',
     fontSize: '14px',
     fontWeight: '600',
-    color: '#374151',
+    color: '#94a3b8',
     marginBottom: '8px'
   },
   input: {
     width: '100%',
     padding: '10px 12px',
-    border: '1px solid #d1d5db',
-    borderRadius: '6px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    color: '#f8fafc',
+    borderRadius: '8px',
     fontSize: '14px',
     fontFamily: 'inherit',
     boxSizing: 'border-box'
   },
   errorMessage: {
-    color: '#ef4444',
+    color: '#fca5a5',
     fontSize: '14px',
     marginBottom: '15px',
     padding: '10px',
-    backgroundColor: '#fee2e2',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     borderRadius: '6px',
     textAlign: 'center'
   },
@@ -739,22 +749,23 @@ const styles = {
   },
   cancelButton: {
     padding: '10px 20px',
-    backgroundColor: '#e5e7eb',
-    color: '#374151',
-    border: 'none',
-    borderRadius: '6px',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    color: '#cbd5e1',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '8px',
     fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer'
   },
   submitButton: {
     padding: '10px 20px',
-    backgroundColor: '#7c3aed',
+    background: 'var(--primary-gradient)',
     color: 'white',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '8px',
     fontSize: '14px',
     fontWeight: '600',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
   }
 };

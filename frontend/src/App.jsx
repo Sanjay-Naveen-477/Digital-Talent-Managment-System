@@ -1,4 +1,4 @@
-
+import './index.css';
 import './App.css';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";    
@@ -13,21 +13,28 @@ import Settings from "./Pages/Settings";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Login />} />
+    <>
+      <video autoPlay loop muted playsInline className="layout-video-bg">
+        <source src="/my-space-video.mp4" type="video/mp4" />
+      </video>
+      <BrowserRouter>
+        <div className="page-transition">
+          <Routes>
+            <Route path="/" element={<Login />} />
 
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/team" element={<Team />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Dashboard />} />
-        </Route>
-      </Routes>
-      <Toaster position="top-center" reverseOrder={false} toastOptions={{ maxCount: 1 }} />
-    </BrowserRouter>
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/team" element={<Team />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<Dashboard />} />
+            </Route>
+          </Routes>
+        </div>
+        <Toaster position="top-center" reverseOrder={false} toastOptions={{ maxCount: 1, style: { background: 'rgba(15,23,42,0.8)', color: '#fff', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' } }} />
+      </BrowserRouter>
+    </>
   );
 }
 

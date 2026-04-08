@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import "./Login.css";
+import "./login.css";
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
+import Particles from "react-tsparticles";
+import { loadFull } from "tsparticles";
 
 const API_URL = "http://localhost:5000";
 
@@ -31,6 +33,60 @@ function Login() {
   const [signUpSuccessMsg, setSignUpSuccessMsg] = useState("");
 
   const navigate = useNavigate();
+
+  const particlesInit = useCallback(async engine => {
+    await loadFull(engine);
+  }, []);
+
+  const particlesOptions = {
+    background: {
+        color: {
+            value: "transparent",
+        },
+    },
+    fpsLimit: 120,
+    particles: {
+        color: {
+            value: "#ffffff",
+        },
+        links: {
+            enable: false,
+        },
+        move: {
+            direction: "none",
+            enable: true,
+            outModes: {
+                default: "out",
+            },
+            random: true,
+            speed: 0.3,
+            straight: false,
+        },
+        number: {
+            density: {
+                enable: true,
+                area: 800,
+            },
+            value: 250,
+        },
+        opacity: {
+            value: { min: 0.1, max: 0.8 },
+            animation: {
+                enable: true,
+                speed: 1,
+                minimumValue: 0.1,
+                sync: false
+            }
+        },
+        shape: {
+            type: "circle",
+        },
+        size: {
+            value: { min: 0.5, max: 2 },
+        },
+    },
+    detectRetina: true,
+  };
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -84,8 +140,11 @@ function Login() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
+    <div className="login-page space-theme-page">
+      {/* Space Background Components */}
+      <Particles id="tsparticles" init={particlesInit} options={particlesOptions} className="particles-canvas" />
+
+      <div className="login-container glass-panel">
         <div className="login-logo">
           <div className="login-logo-icon">DT</div>
           <span className="login-logo-text">TalentHub</span>
@@ -194,7 +253,7 @@ function Login() {
 
       {isSignUpModalOpen && (
         <div className="login-modal-overlay" onClick={() => setIsSignUpModalOpen(false)}>
-          <div className="login-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="login-modal-content glass-panel" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create an Account</h3>
               <button className="close-btn" onClick={() => setIsSignUpModalOpen(false)}>&times;</button>

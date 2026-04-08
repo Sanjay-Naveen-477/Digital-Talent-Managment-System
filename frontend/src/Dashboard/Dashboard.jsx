@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Chart from 'chart.js/auto';
 import axios from 'axios';
@@ -6,7 +6,6 @@ import './Dashboard.css';
 
 export default function Dashboard() {
     const { searchTerm } = useOutletContext() || { searchTerm: '' };
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState('all');
     const [userFilter, setUserFilter] = useState('all');
 
@@ -54,9 +53,9 @@ export default function Dashboard() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    labels: { color: '#4a5568', font: { family: 'Inter', size: 12, weight: 600 }, padding: 20, usePointStyle: true, pointStyle: 'circle' }
+                    labels: { color: '#cbd5e1', font: { family: 'Inter', size: 12, weight: 600 }, padding: 20, usePointStyle: true, pointStyle: 'circle' }
                 },
-                tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#4a5568', bodyColor: '#4a5568', borderColor: 'rgba(255, 255, 255, 0.4)', borderWidth: 1, padding: 12, cornerRadius: 8 }
+                tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleColor: '#f8fafc', bodyColor: '#cbd5e1', borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1, padding: 12, cornerRadius: 8 }
             }
         };
 
@@ -82,8 +81,8 @@ export default function Dashboard() {
                     labels: ['Completed', 'In Progress', 'Pending'],
                     datasets: [{
                         data: [completedCount, progressCount, pendingCount],
-                        backgroundColor: ['rgba(168, 237, 234, 0.8)', 'rgba(166, 193, 238, 0.8)', 'rgba(252, 182, 159, 0.8)'],
-                        borderColor: ['rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.8)'],
+                        backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(236, 72, 153, 0.8)'],
+                        borderColor: ['rgba(15, 23, 42, 1)', 'rgba(15, 23, 42, 1)', 'rgba(15, 23, 42, 1)'],
                         borderWidth: 3
                     }]
                 },
@@ -99,8 +98,8 @@ export default function Dashboard() {
                     datasets: [{
                         label: 'Completed Tasks',
                         data: dataStats,
-                        backgroundColor: 'rgba(168, 237, 234, 0.8)',
-                        borderColor: 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
                         borderWidth: 2,
                         borderRadius: 8
                     }]
@@ -108,8 +107,8 @@ export default function Dashboard() {
                 options: {
                     ...chartOptions,
                     scales: {
-                        y: { beginAtZero: true, ticks: { color: '#718096' }, grid: { color: 'rgba(255, 255, 255, 0.3)', drawBorder: false } },
-                        x: { ticks: { color: '#718096' }, grid: { display: false } }
+                        y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
                     }
                 }
             });
@@ -121,22 +120,6 @@ export default function Dashboard() {
         };
     }, [tasks]);
 
-    const handleAddTask = (e) => {
-        e.preventDefault();
-        alert('Task added successfully! (Demo)');
-        setIsModalOpen(false);
-    };
-
-    const handleDeleteTask = (id) => {
-        if (window.confirm('Are you sure you want to delete this task?')) {
-            setTasks(tasks.filter(t => t.id !== id));
-        }
-    };
-
-    const handleEditTask = () => {
-        alert('Edit task functionality (Demo)');
-    };
-
     const toggleUserMenu = () => {
         alert('User menu toggle (Demo)');
     };
@@ -145,8 +128,8 @@ export default function Dashboard() {
         <>
             {/* Summary Cards */}
                     <div className="summary-grid">
-                        <div className="summary-card glass-strong" style={{ background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%)' }}>
-                            <div className="card-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                        <div className="summary-card glass-strong" style={{ borderLeft: '4px solid #8b5cf6' }}>
+                            <div className="card-icon" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}>
                                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
                                     <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
@@ -158,8 +141,8 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="summary-card glass-strong" style={{ background: 'linear-gradient(135deg, rgba(67, 233, 123, 0.3) 0%, rgba(56, 249, 215, 0.3) 100%)' }}>
-                            <div className="card-icon" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                        <div className="summary-card glass-strong" style={{ borderLeft: '4px solid #10b981' }}>
+                            <div className="card-icon" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
                                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
                                     <path d="M5 13l4 4L19 7" />
                                 </svg>
@@ -171,8 +154,8 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="summary-card glass-strong" style={{ background: 'linear-gradient(135deg, rgba(79, 172, 254, 0.3) 0%, rgba(0, 242, 254, 0.3) 100%)' }}>
-                            <div className="card-icon" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                        <div className="summary-card glass-strong" style={{ borderLeft: '4px solid #ec4899' }}>
+                            <div className="card-icon" style={{ background: 'linear-gradient(135deg, #ec4899 0%, #e11d48 100%)' }}>
                                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
                                     <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -184,8 +167,8 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="summary-card glass-strong" style={{ background: 'linear-gradient(135deg, rgba(240, 147, 251, 0.3) 0%, rgba(245, 87, 108, 0.3) 100%)' }}>
-                            <div className="card-icon" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                        <div className="summary-card glass-strong" style={{ borderLeft: '4px solid #06b6d4' }}>
+                            <div className="card-icon" style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)' }}>
                                 <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
                                     <path d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
@@ -204,9 +187,6 @@ export default function Dashboard() {
                         <div className="section-card glass-strong">
                             <div className="section-header">
                                 <h2 className="section-title">Task Management</h2>
-                                <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-                                    <span>+ Add Task</span>
-                                </button>
                             </div>
 
                             <div className="filters">
@@ -232,7 +212,6 @@ export default function Dashboard() {
                                             <th>Assigned To</th>
                                             <th>Deadline</th>
                                             <th>Status</th>
-                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -245,25 +224,11 @@ export default function Dashboard() {
                                                 <tr key={task.id}>
                                                     <td>{task.name}</td>
                                                     <td>{task.assignedTo || task.userName}</td>
-                                                    <td>{task.deadline}</td>
+                                                    <td>{task.deadline && task.deadline !== 'TBD' ? new Date(task.deadline).toISOString().split('T')[0] : 'TBD'}</td>
                                                     <td>
                                                         <span className={`status-badge status-${task.status}`}>
                                                             {task.status === 'completed' ? 'Completed' : task.status === 'progress' ? 'In Progress' : 'Pending'}
                                                         </span>
-                                                    </td>
-                                                    <td>
-                                                        <div className="action-buttons">
-                                                            <button className="btn-icon" onClick={handleEditTask}>
-                                                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                                                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                </svg>
-                                                            </button>
-                                                            <button className="btn-icon" onClick={() => handleDeleteTask(task.id)}>
-                                                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                                                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                            </button>
-                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -282,11 +247,11 @@ export default function Dashboard() {
                                     const assignee = task.assignedTo || task.userName || 'Unassigned';
                                     const initials = assignee.length > 1 ? assignee.substring(0, 2).toUpperCase() : 'UA';
                                     const gradients = [
-                                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                                        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-                                        'linear-gradient(135deg, #ffa726 0%, #fb8c00 100%)',
-                                        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                                        'var(--primary-gradient)',
+                                        'var(--secondary-gradient)',
+                                        'var(--success-gradient)',
+                                        'var(--warning-gradient)',
+                                        'var(--teal-gradient)'
                                     ];
                                     return (
                                         <div className="activity-item" key={task.id || idx}>

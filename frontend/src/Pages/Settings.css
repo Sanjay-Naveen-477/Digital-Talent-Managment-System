@@ -7,10 +7,10 @@
   color: #333;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   animation: fadeIn 0.4s ease-out;
-  background-color: rgba(255, 255, 255, 0.27);
+  background-color: transparent;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(14px);
+  border: none;
+  backdrop-filter: none;
 }
 
 @keyframes fadeIn {
@@ -25,12 +25,12 @@
 .settings-header h1 {
   font-size: 2rem;
   font-weight: 700;
-  color: #111827;
+  color: #f8fafc;
   margin-bottom: 0.5rem;
 }
 
 .settings-header p {
-  color: #6b7280;
+  color: #94a3b8;
   font-size: 1rem;
 }
 
@@ -44,13 +44,19 @@
 .settings-sidebar {
   width: 280px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 1rem 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 2rem;
+  align-self: flex-start;
+  height: max-content;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
 }
 
 .settings-nav {
@@ -68,7 +74,7 @@
   width: 100%;
   text-align: left;
   font-size: 0.95rem;
-  color: #4b5563;
+  color: #cbd5e1;
   cursor: pointer;
   transition: all 0.2s ease;
   border-left: 3px solid transparent;
@@ -76,7 +82,7 @@
 
 .settings-tab:hover {
   background: rgba(79, 70, 229, 0.05);
-  color: #111827;
+  color: #f8fafc;
 }
 
 .settings-tab.active {
@@ -93,9 +99,9 @@
 /* Content Area */
 .settings-content {
   flex-grow: 1;
-  background: #ffffff;
+  background: rgba(15, 23, 42, 0.4);
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   min-height: 500px;
   position: relative;
   overflow: hidden;
@@ -113,20 +119,20 @@
 
 .settings-section h2 {
   font-size: 1.5rem;
-  color: #111827;
+  color: #f8fafc;
   margin-bottom: 0.5rem;
 }
 
 .settings-subtitle {
-  color: #6b7280;
+  color: #94a3b8;
   margin-bottom: 2rem;
   font-size: 0.95rem;
 }
 
 /* Cards & Forms */
 .settings-card {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
@@ -134,12 +140,12 @@
 }
 
 .settings-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .settings-card h3 {
   font-size: 1.1rem;
-  color: #374151;
+  color: #cbd5e1;
   margin-bottom: 0.75rem;
 }
 
@@ -151,7 +157,7 @@
   display: block;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #374151;
+  color: #cbd5e1;
   margin-bottom: 0.5rem;
 }
 
@@ -162,8 +168,10 @@
 select {
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  background-color: rgba(15, 23, 42, 0.4);
+  color: #f8fafc;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   font-family: inherit;
@@ -173,8 +181,8 @@ select {
 .form-group input:focus,
 .form-group textarea:focus,
 select:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .form-group textarea {
@@ -223,9 +231,9 @@ button {
 }
 
 .btn-secondary {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: rgba(15, 23, 42, 0.4);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   transition: all 0.2s;
@@ -233,13 +241,13 @@ button {
 
 .btn-secondary:hover {
   background: #f3f4f6;
-  border-color: #9ca3af;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .btn-danger {
   background: #fef2f2;
   color: #dc2626;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   transition: all 0.2s;
@@ -247,7 +255,31 @@ button {
 
 .btn-danger:hover {
   background: #fee2e2;
-  border-color: #f87171;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-logout {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  transition: background 0.2s, transform 0.1s;
+  margin-left: 1rem;
+}
+
+.btn-logout:hover {
+  background: #b91c1c;
+}
+
+.btn-logout:active {
+  transform: scale(0.98);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 /* Toggle Switch */
@@ -280,7 +312,7 @@ button {
   width: 20px;
   left: 4px;
   bottom: 4px;
-  background-color: white;
+  background-color: rgba(15, 23, 42, 0.4);
   transition: .4s;
   border-radius: 50%;
 }
@@ -330,8 +362,8 @@ input:checked + .slider:before {
 
 .activity-list li {
   padding: 0.75rem 0;
-  border-bottom: 1px solid #e5e7eb;
-  color: #4b5563;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
   font-size: 0.9rem;
 }
 
@@ -352,7 +384,7 @@ input:checked + .slider:before {
 
 .highlight-card {
   background: #eff6ff;
-  border-color: #bfdbfe;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .checkbox-label {
@@ -361,7 +393,7 @@ input:checked + .slider:before {
   gap: 0.75rem;
   cursor: pointer;
   margin-bottom: 0.75rem;
-  color: #4b5563;
+  color: #cbd5e1;
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -381,13 +413,13 @@ input:checked + .slider:before {
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   border: 2px solid transparent;
-  background: #f3f4f6;
-  color: #374151;
+  background: rgba(15, 23, 42, 0.4);
+  color: #cbd5e1;
   font-weight: 500;
 }
 
 .theme-btn.active {
-  border-color: #4f46e5;
+  border-color: rgba(255, 255, 255, 0.2);
   background: #e0e7ff;
   color: #4f46e5;
 }
@@ -404,7 +436,7 @@ input:checked + .slider:before {
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid white;
-  box-shadow: 0 0 0 2px transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: all 0.2s;
 }
 
@@ -413,7 +445,7 @@ input:checked + .slider:before {
 }
 
 .color-circle:first-child {
-  box-shadow: 0 0 0 2px #4f46e5;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .tags-container {
@@ -424,7 +456,7 @@ input:checked + .slider:before {
 
 .tag {
   background: #e5e7eb;
-  color: #374151;
+  color: #cbd5e1;
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
   font-size: 0.85rem;

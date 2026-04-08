@@ -154,19 +154,21 @@ export default function Reports() {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    color: '#cbd5e1',
     plugins: {
       legend: {
         position: 'bottom',
-        labels: { font: { family: "'Inter', sans-serif" } }
-      }
+        labels: { color: '#cbd5e1', font: { family: "'Inter', sans-serif" } }
+      },
+      tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleColor: '#f8fafc', bodyColor: '#cbd5e1', borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1 }
     }
   };
 
   const barOptions = {
     ...chartOptions,
     scales: {
-      x: { grid: { display: false } },
-      y: { grid: { borderDash: [4, 4] } }
+      x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+      y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [4, 4] } }
     }
   };
 

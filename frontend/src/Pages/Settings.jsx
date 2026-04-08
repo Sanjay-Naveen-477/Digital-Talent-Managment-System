@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './Settings.css';
 
 const API_URL = 'http://localhost:5000';
@@ -8,14 +9,21 @@ const API_URL = 'http://localhost:5000';
 const TABS = [
   { id: 'profile', icon: '👤', label: 'Profile Settings' },
   { id: 'security', icon: '🔐', label: 'Security Settings' },
-  { id: 'roles', icon: '🎭', label: 'Role & Permissions' },
   { id: 'notifications', icon: '🔔', label: 'Notification Settings' },
-  
+
 
 ];
 
 export default function Settings() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('profile');
+  
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -32,6 +40,15 @@ export default function Settings() {
   });
   const [securityError, setSecurityError] = useState('');
   const [securityMessage, setSecurityMessage] = useState('');
+
+  const [notificationSettings, setNotificationSettings] = useState({
+    taskAssignment: true,
+    deadlineReminders: true,
+    inAppNotifications: true
+  });
+  const [notificationError, setNotificationError] = useState('');
+  const [deadlineCheckTimer, setDeadlineCheckTimer] = useState(null);
+  const [deadlineCheckInterval, setDeadlineCheckInterval] = useState(null);
 
   useEffect(() => {
     const email = localStorage.getItem('userEmail') || '';
@@ -62,7 +79,101 @@ export default function Settings() {
     };
 
     loadProfile();
+
+    const savedSettings = localStorage.getItem('notificationSettings');
+    if (savedSettings) {
+      try {
+        setNotificationSettings(JSON.parse(savedSettings));
+      } catch (e) {
+        setNotificationSettings({ taskAssignment: true, deadlineReminders: true, inAppNotifications: true });
+      }
+    }
+
+    const runAssignedNotifications = async () => {
+      const saved = localStorage.getItem('notificationSettings');
+      const userSettings = saved ? JSON.parse(saved) : notificationSettings;
+      if (!userSettings.taskAssignment && !userSettings.inAppNotifications) return;
+      const loggedUserName = localStorage.getItem('userName') || '';
+      const res = await axios.get(`${API_URL}/tasks`);
+      if (res.data.status === 'success') {
+        const assignedToMe = res.data.tasks.filter((t) => (t.assignedTo || '').toLowerCase() === loggedUserName.toLowerCase() && t.status !== 'completed');
+        const alreadyNotified = JSON.parse(localStorage.getItem('notifiedTaskIds') || '[]');
+
+        assignedToMe.forEach((task) => {
+          if (!alreadyNotified.includes(task.id)) {
+            toast(`Task assigned: ${task.name} (deadline: ${task.deadline || 'TBD'})`, { icon: '🔔' });
+            alreadyNotified.push(task.id);
+          }
+        });
+
+        localStorage.setItem('notifiedTaskIds', JSON.stringify(alreadyNotified));
+      }
+    };
+
+    runAssignedNotifications();
+
+    const getNextMorning10 = () => {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0, 0);
+      if (now >= next) next.setDate(next.getDate() + 1);
+      return next;
+    };
+
+    let timeoutId;
+    let intervalId;
+
+    const sendDeadlineReminder = async () => {
+      const saved = localStorage.getItem('notificationSettings');
+      const userSettings = saved ? JSON.parse(saved) : notificationSettings;
+      if (!userSettings.deadlineReminders) return;
+      const loggedUserName = localStorage.getItem('userName') || '';
+      const resp = await axios.get(`${API_URL}/tasks`);
+      if (resp.data.status === 'success') {
+        const today = new Date().toISOString().slice(0, 10);
+        resp.data.tasks.forEach((task) => {
+          if ((task.assignedTo || '').toLowerCase() === loggedUserName.toLowerCase() && task.status !== 'completed') {
+            const due = task.deadline || task.dueDate || '';
+            if (due && due <= today) {
+              toast(`Deadline reminder: ${task.name} is due on ${due}`, { icon: '⏰' });
+            }
+          }
+        });
+      }
+    };
+
+    const scheduleReminderCheck = () => {
+      const next = getNextMorning10();
+      const delay = next.getTime() - Date.now();
+      timeoutId = setTimeout(async () => {
+        await sendDeadlineReminder();
+        intervalId = setInterval(sendDeadlineReminder, 24 * 60 * 60 * 1000);
+        setDeadlineCheckInterval(intervalId);
+      }, delay);
+      setDeadlineCheckTimer(timeoutId);
+    };
+
+    scheduleReminderCheck();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
+
+  const handleSaveNotificationSettings = () => {
+    if (!notificationSettings.taskAssignment && !notificationSettings.deadlineReminders && !notificationSettings.inAppNotifications) {
+      setNotificationError('Please choose at least one notification option.');
+      return;
+    }
+
+    setNotificationError('');
+    localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+    toast.success('Notification settings saved successfully.');
+  };
+
+  const handleNotificationToggle = (field) => {
+    setNotificationSettings((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
 
   const handleProfileChange = (field, value) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
@@ -120,6 +231,7 @@ export default function Settings() {
         localStorage.setItem('userEmail', profile.email.trim());
         localStorage.setItem('userProfilePicture', profile.picture || '');
         localStorage.setItem('userBio', profile.bio || '');
+        window.dispatchEvent(new Event('profileUpdated'));
         setUploadError('');
         setSaveMessage('Profile saved successfully.');
         toast.success('Profile updated successfully');
@@ -183,6 +295,24 @@ export default function Settings() {
     }
   };
 
+  const handleLogout = () => {
+    // Clear all user data from localStorage
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userProfilePicture');
+    localStorage.removeItem('userBio');
+    localStorage.removeItem('authToken');
+
+    // Show logout message
+    toast.success('Logged out successfully');
+
+    // Redirect to login page
+    setTimeout(() => {
+      navigate('/');
+    }, 1000);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'profile':
@@ -243,6 +373,7 @@ export default function Settings() {
               </div>
               <div className="form-actions">
                 <button className="btn-primary" type="button" onClick={handleSaveProfile}>Save Changes</button>
+                <button className="btn-logout" type="button" onClick={handleLogout}>Logout</button>
               </div>
               {saveMessage && <div className="success-message">{saveMessage}</div>}
             </div>
@@ -296,34 +427,61 @@ export default function Settings() {
             </div>
           </div>
         );
-     
+
       case 'notifications':
         return (
           <div className="settings-section">
             <h2>Notification Settings</h2>
             <p className="settings-subtitle">Control how you are alerted.</p>
             <div className="settings-form">
-              {[
-                "Email notifications",
-                "Task assignment alerts",
-                "Deadline reminders",
-                "Completion updates"
-              ].map(notif => (
-                <div className="flex-between settings-card" key={notif}>
-                  <span>{notif}</span>
-                  <label className="toggle-switch">
-                    <input type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-              ))}
+              <div className="flex-between settings-card">
+                <span>In-app notifications</span>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={notificationSettings.inAppNotifications}
+                    onChange={() => handleNotificationToggle('inAppNotifications')}
+                  />
+                  <span className="slider"></span>
+                </label>
+              </div>
+
+              <div className="flex-between settings-card">
+                <span>Task assignment alerts</span>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={notificationSettings.taskAssignment}
+                    onChange={() => handleNotificationToggle('taskAssignment')}
+                  />
+                  <span className="slider"></span>
+                </label>
+              </div>
+
+              <div className="flex-between settings-card">
+                <span>Deadline reminders</span>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={notificationSettings.deadlineReminders}
+                    onChange={() => handleNotificationToggle('deadlineReminders')}
+                  />
+                  <span className="slider"></span>
+                </label>
+              </div>
+
+              <div className="form-actions">
+                <button className="btn-primary" type="button" onClick={handleSaveNotificationSettings}>Save Notification Settings</button>
+              </div>
+              {notificationError && <p className="error-message">{notificationError}</p>}
+
             </div>
           </div>
         );
 
-     
-       
-    
+
+
+
 
       default:
         return <div>Select a setting category</div>;

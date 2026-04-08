@@ -20,6 +20,7 @@ export default function Team() {
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [teamForm, setTeamForm] = useState({ name: '', lead: '', status: 'Active' });
   
+  const [isTaskModalOpen, setTaskModalOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: '', assignee: '', status: 'pending', description: '', dueDate: '', tags: '' });
   const [memberForm, setMemberForm] = useState({ name: '', role: '' });
   const [customRole, setCustomRole] = useState(false);
@@ -91,6 +92,12 @@ export default function Team() {
   const closeModal = () => {
     setModalOpen(false);
     setEditingTeamId(null);
+    setError('');
+  };
+
+  const closeTaskModal = () => {
+    setTaskModalOpen(false);
+    setTaskForm({ title: '', assignee: '', status: 'pending', description: '', dueDate: '', tags: '' });
     setError('');
   };
 
@@ -195,8 +202,7 @@ export default function Team() {
     try {
       await axios.post(`http://localhost:5000/tasks`, payload, apiHeaders);
       fetchTeamsAndTasks();
-      setTaskForm({ title: '', assignee: '', status: 'pending', description: '', dueDate: '', tags: '' });
-      setError('');
+      closeTaskModal();
       toast.success('Task added successfully!', { id: 'crud' });
     } catch(err) {
       toast.error('Failed to add task.', { id: 'crud' });
@@ -366,7 +372,7 @@ export default function Team() {
                             <td>{task.description || 'No description'}</td>
                             <td>{task.assignedTo || 'Unassigned'}</td>
                             <td>{task.createdAt ? new Date(task.createdAt).toLocaleDateString() : 'Unknown'}</td>
-                            <td>{task.dueDate || task.deadline || 'TBD'}</td>
+                            <td>{task.dueDate && task.dueDate !== 'TBD' ? new Date(task.dueDate).toISOString().split('T')[0] : task.deadline && task.deadline !== 'TBD' ? new Date(task.deadline).toISOString().split('T')[0] : 'TBD'}</td>
                             <td>{Array.isArray(task.tags) ? task.tags.join(', ') : task.tags || 'None'}</td>
                             <td className="ds-t-status ds-capitalize">{task.status}</td>
                             <td>
@@ -377,7 +383,7 @@ export default function Team() {
                                     <button onClick={() => setTaskStatus(task.id, 'pending', task)}>Pending</button>
                                     <button onClick={() => setTaskStatus(task.id, 'progress', task)}>In Progress</button>
                                     <button onClick={() => setTaskStatus(task.id, 'completed', task)}>Completed</button>
-                                    <button onClick={() => setTaskToDelete(task.id)} style={{ color: '#ef4444', borderTop: '1px solid #f3f4f6', marginTop: '4px', paddingTop: '8px' }}>Delete</button>
+                                    <button onClick={() => setTaskToDelete(task.id)} style={{ color: '#ef4444', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '4px', paddingTop: '8px' }}>Delete</button>
                                   </div>
                                 )}
                               </div>
@@ -392,24 +398,11 @@ export default function Team() {
                     )}
                   </div>
 
-                  <div className="ds-add-row ds-add-task">
-                    <input type="text" className="ds-input ds-input-wide" placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} />
-                    <input type="text" className="ds-input ds-input-wide" placeholder="Description" value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} />
-                    <select className="ds-select" value={taskForm.assignee} onChange={(e) => setTaskForm({ ...taskForm, assignee: e.target.value })}>
-                      <option value="" disabled>Assign to</option>
-                      {selectedTeam.members?.map((m) => (
-                        <option key={m.id} value={m.name}>{m.name}</option>
-                      ))}
-                    </select>
-                    <input type="date" className="ds-input" value={taskForm.dueDate} onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} />
-                    <input type="text" className="ds-input" placeholder="Tags (comma separated)" value={taskForm.tags} onChange={(e) => setTaskForm({ ...taskForm, tags: e.target.value })} />
-                    <select className="ds-select" value={taskForm.status} onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}>
-                      <option value="pending">Pending</option>
-                      <option value="progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                    </select>
-                    <button className="ds-btn-primary" onClick={addTask}>Add Task</button>
-                  </div>
+                  {isAdmin && (
+                    <div className="ds-add-task-button-wrapper">
+                      <button className="ds-btn-primary ds-add-task-btn" onClick={() => setTaskModalOpen(true)}>+ Add Task</button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="ds-analytics-col">
@@ -470,6 +463,96 @@ export default function Team() {
                   <button className="ds-btn-primary" style={{backgroundColor: '#ef4444'}} onClick={() => deleteTask(taskToDelete)}>Delete</button>
                </div>
            </div>
+        </div>
+      )}
+
+      {isTaskModalOpen && (
+        <div className="team-modal-overlay ds-blur-overlay" onClick={closeTaskModal}>
+          <div className="team-modal-content ds-modal ds-task-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="team-modal-header">
+              <h2 className="team-modal-title">Add New Task</h2>
+              <button className="team-modal-close" onClick={closeTaskModal}>×</button>
+            </div>
+            {error && <p className="team-error-message">{error}</p>}
+            
+            <div className="ds-task-form">
+              <div className="ds-form-group">
+                <label>Task Name *</label>
+                <input 
+                  type="text" 
+                  className="team-form-input" 
+                  placeholder="Enter task title" 
+                  value={taskForm.title} 
+                  onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} 
+                />
+              </div>
+
+              <div className="ds-form-group">
+                <label>Description</label>
+                <textarea 
+                  className="team-form-input ds-task-textarea" 
+                  placeholder="Enter task description" 
+                  value={taskForm.description} 
+                  onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                />
+              </div>
+
+              <div className="ds-form-group">
+                <label>Assigned To *</label>
+                <select 
+                  className="team-form-select" 
+                  value={taskForm.assignee} 
+                  onChange={(e) => setTaskForm({ ...taskForm, assignee: e.target.value })}
+                >
+                  <option value="" disabled>Select team member</option>
+                  {selectedTeam?.members?.map((m) => (
+                    <option key={m.id} value={m.name}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="ds-form-row">
+                <div className="ds-form-group">
+                  <label>Due Date</label>
+                  <input 
+                    type="date" 
+                    className="team-form-input" 
+                    value={taskForm.dueDate} 
+                    onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} 
+                  />
+                </div>
+
+                <div className="ds-form-group">
+                  <label>Status</label>
+                  <select 
+                    className="team-form-select" 
+                    value={taskForm.status} 
+                    onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="ds-form-group">
+                <label>Tags</label>
+                <input 
+                  type="text" 
+                  className="team-form-input" 
+                  placeholder="Enter tags (comma separated)" 
+                  value={taskForm.tags} 
+                  onChange={(e) => setTaskForm({ ...taskForm, tags: e.target.value })} 
+                />
+              </div>
+            </div>
+
+            <div className="team-modal-buttons">
+              <button className="team-cancel-btn" type="button" onClick={closeTaskModal}>Cancel</button>
+              <button className="team-submit-btn" type="button" onClick={addTask}>Add Task</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
