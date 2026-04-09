@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import './Tasks.css';
+import CustomDropdown from '../Components/CustomDropdown';
 
 const API_URL = "http://localhost:5000";
 
@@ -23,11 +24,13 @@ export default function Tasks() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const role = localStorage.getItem('userRole') || 'user';
+  const userEmail = localStorage.getItem('userEmail') || '';
   const isAdmin = role === 'admin';
-  const apiHeaders = { headers: { 'X-User-Role': role } };
+  const apiHeaders = { headers: { 'X-User-Role': role, 'X-User-Email': userEmail } };
 
   const fetchTasks = async () => {
     try {
@@ -139,20 +142,29 @@ export default function Tasks() {
     }
   };
 
-  const handleDeleteTask = async (id) => {
-    if (confirm('Are you sure you want to delete this task?')) {
+  const handleDeleteTask = (id) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (deleteConfirmId) {
       try {
-        await axios.delete(`${API_URL}/tasks/${id}`, apiHeaders);
-        setTasks(tasks.filter(task => task.id !== id));
+        await axios.delete(`${API_URL}/tasks/${deleteConfirmId}`, apiHeaders);
+        setTasks(tasks.filter(task => task.id !== deleteConfirmId));
         const newSelected = new Set(selectedTasks);
-        newSelected.delete(id);
+        newSelected.delete(deleteConfirmId);
         setSelectedTasks(newSelected);
         toast.success('Task deleted successfully', { id: 'crud' });
       } catch (err) {
         console.error("Failed to delete task", err);
         toast.error('Failed to delete task', { id: 'crud' });
       }
+      setDeleteConfirmId(null);
     }
+  };
+
+  const cancelDeleteTask = () => {
+    setDeleteConfirmId(null);
   };
 
   const handleAddTask = async () => {
@@ -229,29 +241,29 @@ export default function Tasks() {
 
       <div style={styles.controlsBar}>
         <div style={styles.filtersContainer}>
-          <select
+          <CustomDropdown
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={styles.select}
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
+            onChange={setStatusFilter}
+            options={[
+              { label: 'All Status', value: 'all' },
+              { label: 'Pending', value: 'pending' },
+              { label: 'In Progress', value: 'progress' },
+              { label: 'Completed', value: 'completed' }
+            ]}
+            placeholder="All Status"
+            style={{ minWidth: '150px' }}
+          />
 
-          <select
+          <CustomDropdown
             value={userFilter}
-            onChange={(e) => setUserFilter(e.target.value)}
-            style={styles.select}
-          >
-            <option value="all">All Users</option>
-            {uniqueUsers.map(user => (
-              <option key={user} value={user}>
-                {tasks.find(t => t.user === user)?.assignedTo}
-              </option>
-            ))}
-          </select>
+            onChange={setUserFilter}
+            options={[
+              { label: 'All Users', value: 'all' },
+              ...uniqueUsers.map(user => ({ label: tasks.find(t => t.user === user)?.assignedTo || user, value: user }))
+            ]}
+            placeholder="All Users"
+            style={{ minWidth: '150px' }}
+          />
         </div>
 
         <div style={styles.buttonGroup}>
@@ -363,26 +375,41 @@ export default function Tasks() {
             ))}
           </tbody>
         </table>
-        {isModalOpen && selectedTask && (
-          <div style={styles.modalOverlay} onClick={closeTaskModal}>
-            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <h2 style={styles.modalTitle}>{selectedTask.name}</h2>
-              <p style={styles.modalText}><strong>Description:</strong> {selectedTask.description || 'No description provided.'}</p>
-              <p style={styles.modalText}><strong>Assigned To:</strong> {selectedTask.assignedTo || 'Unassigned'}</p>
-              <p style={styles.modalText}><strong>Status:</strong> {getStatusLabel(selectedTask.status)}</p>
-              <p style={styles.modalText}><strong>Created:</strong> {formatDate(selectedTask.createdAt)}</p>
-              <p style={styles.modalText}><strong>Due Date:</strong> {formatDate(selectedTask.deadline)}</p>
-              <p style={styles.modalText}><strong>Tags:</strong> {Array.isArray(selectedTask.tags) ? selectedTask.tags.join(', ') : (selectedTask.tags || 'None')}</p>
-              <div style={styles.modalButtons}>
-                <button onClick={closeTaskModal} style={styles.cancelButton}>Close</button>
-              </div>
-            </div>
-          </div>
-        )}
+
         {filteredTasks.length === 0 && (
           <div style={styles.noData}>No tasks found</div>
         )}
       </div>
+
+      {deleteConfirmId && (
+        <div style={styles.modalOverlay} onClick={cancelDeleteTask}>
+          <div style={{ ...styles.modal, padding: '40px 30px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Confirm Delete</h2>
+            <p style={styles.modalText}>Are you sure you want to delete this task?</p>
+            <div style={{ ...styles.modalButtons, justifyContent: 'center', marginTop: '30px' }}>
+              <button onClick={cancelDeleteTask} style={{ ...styles.cancelButton, minWidth: '100px' }}>No</button>
+              <button onClick={confirmDeleteTask} style={{ ...styles.submitButton, background: 'var(--secondary-gradient)', minWidth: '100px' }}>Yes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isModalOpen && selectedTask && (
+        <div style={styles.modalOverlay} onClick={closeTaskModal}>
+          <div style={{ ...styles.modal, minHeight: '450px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>{selectedTask.name}</h2>
+            <p style={styles.modalText}><strong>Description:</strong> {selectedTask.description || 'No description provided.'}</p>
+            <p style={styles.modalText}><strong>Assigned To:</strong> {selectedTask.assignedTo || 'Unassigned'}</p>
+            <p style={styles.modalText}><strong>Status:</strong> {getStatusLabel(selectedTask.status)}</p>
+            <p style={styles.modalText}><strong>Created:</strong> {formatDate(selectedTask.createdAt)}</p>
+            <p style={styles.modalText}><strong>Due Date:</strong> {formatDate(selectedTask.deadline)}</p>
+            <p style={styles.modalText}><strong>Tags:</strong> {Array.isArray(selectedTask.tags) ? selectedTask.tags.join(', ') : (selectedTask.tags || 'None')}</p>
+            <div style={styles.modalButtons}>
+              <button onClick={closeTaskModal} style={styles.cancelButton}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isAddModalOpen && (
         <div style={styles.modalOverlay} onClick={handleCloseModal}>
@@ -448,15 +475,18 @@ export default function Tasks() {
 
             <div style={styles.formGroup}>
               <label style={styles.label}>Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                style={styles.input}
-              >
-                <option value="pending">Pending</option>
-                <option value="progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
+              <div style={{ zIndex: 100 }}>
+                <CustomDropdown
+                  value={formData.status}
+                  onChange={(val) => setFormData({ ...formData, status: val })}
+                  options={[
+                    { label: 'Pending', value: 'pending' },
+                    { label: 'In Progress', value: 'progress' },
+                    { label: 'Completed', value: 'completed' }
+                  ]}
+                  placeholder="Status"
+                />
+              </div>
             </div>
 
             <div style={styles.modalButtons}>

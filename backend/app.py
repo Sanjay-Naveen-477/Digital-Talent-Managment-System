@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -7,12 +8,23 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Enhanced CORS configuration
+# Deployment-friendly configuration
+default_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+allowed_origins = os.environ.get("CORS_ORIGINS")
+if allowed_origins:
+    allowed_origins = [origin.strip() for origin in allowed_origins.split(",") if origin.strip()]
+else:
+    allowed_origins = default_origins
+
 CORS(app, resources={
-    r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}
+    r"/*": {"origins": allowed_origins}
 }, supports_credentials=True)
 
-client = MongoClient("mongodb+srv://sanjaynaveen477:sanjay123@cluster0.an0tz.mongodb.net/talent_db?retryWrites=true&w=majority")
+mongo_uri = os.environ.get(
+    "MONGO_URI",
+    "mongodb+srv://sanjaynaveen477:sanjay123@cluster0.an0tz.mongodb.net/talent_db?retryWrites=true&w=majority"
+)
+client = MongoClient(mongo_uri)
 
 def admin_required(f):
     @wraps(f)
@@ -26,6 +38,7 @@ db = client["talent_db"]
 users = db["users"]
 tasks_col = db["tasks"]
 teams_col = db["teams"]
+notifications_col = db["notifications"]
 
 @app.route("/")
 def home():
@@ -272,16 +285,19 @@ def get_reports():
 def add_task():
     data = request.json
     now = datetime.utcnow()
+    assigned_to = data.get("assignedTo", "").strip()
+    admin_email = request.headers.get("X-User-Email", "Admin")
+    
     new_task = {
         "name": data.get("name"),
-        "assignedTo": data.get("assignedTo"),
+        "assignedTo": assigned_to,
         "deadline": data.get("dueDate", data.get("deadline")),
         "dueDate": data.get("dueDate", data.get("deadline")),
         "teamId": data.get("teamId"),
         "status": data.get("status", "pending"),
         "tags": data.get("tags", []),
         "description": data.get("description", ""),
-        "user": data.get("assignedTo", "").lower().split(' ')[0],
+        "user": assigned_to.lower().split(' ')[0],
         "createdAt": now,
         "updatedAt": now
     }
@@ -292,23 +308,66 @@ def add_task():
     # convert datetimes to strings for JSON output
     task_doc["createdAt"] = task_doc["createdAt"].isoformat()
     task_doc["updatedAt"] = task_doc["updatedAt"].isoformat()
+    
+    # Create notification for assigned user
+    if assigned_to:
+        # Find user email by name
+        user_doc = users.find_one({"name": assigned_to})
+        if not user_doc:
+            # Try case-insensitive search
+            user_doc = users.find_one({"name": {"$regex": f"^{assigned_to}$", "$options": "i"}})
+        
+        if user_doc:
+            notification = {
+                "userEmail": user_doc.get("email"),
+                "taskId": str(result.inserted_id),
+                "taskName": data.get("name"),
+                "taskDescription": data.get("description", ""),
+                "assignedBy": admin_email,
+                "deadline": data.get("dueDate", data.get("deadline")),
+                "isRead": False,
+                "createdAt": now,
+                "type": "task_assignment"
+            }
+            notifications_col.insert_one(notification)
+    
     return jsonify({"status": "success", "task": task_doc})
 
 @app.route("/tasks/<task_id>", methods=["PUT"])
-@admin_required
 def update_task(task_id):
     data = request.json
     now = datetime.utcnow()
+    role = request.headers.get("X-User-Role", "").lower()
+    user_email = request.headers.get("X-User-Email", "").lower()
+    user_name = request.headers.get("X-User-Name", "").strip()
+
+    task_doc = tasks_col.find_one({"_id": ObjectId(task_id)})
+    if not task_doc:
+        return jsonify({"status": "fail", "message": "Task not found."}), 404
+
+    old_assignee = task_doc.get("assignedTo", "")
+    new_assignee = data.get("assignedTo", "").strip()
+
+    if role != "admin":
+        if not user_email or not user_name:
+            return jsonify({"status": "fail", "message": "User identification required."}), 403
+        current_user = users.find_one({"email": user_email})
+        current_user_name = current_user.get("name", "") if current_user else user_name
+        if old_assignee.strip().lower() != current_user_name.strip().lower():
+            return jsonify({"status": "fail", "message": "Only the assigned user can update this task."}), 403
+        if new_assignee and new_assignee.strip().lower() != old_assignee.strip().lower():
+            return jsonify({"status": "fail", "message": "Only admin can change task assignee."}), 403
+
     update_data = {
         "name": data.get("name"),
-        "assignedTo": data.get("assignedTo"),
+        "assignedTo": new_assignee,
         "deadline": data.get("dueDate", data.get("deadline")),
         "dueDate": data.get("dueDate", data.get("deadline")),
         "teamId": data.get("teamId"),
         "status": data.get("status"),
         "tags": data.get("tags", []),
         "description": data.get("description", ""),
-        "user": data.get("assignedTo", "").lower().split(' ')[0],
+        "user": new_assignee.lower().split(' ')[0] if new_assignee else "",
         "updatedAt": now
     }
     tasks_col.update_one({"_id": ObjectId(task_id)}, {"$set": update_data})
@@ -318,6 +377,26 @@ def update_task(task_id):
     del task_doc["_id"]
     task_doc["createdAt"] = task_doc.get("createdAt").isoformat() if task_doc.get("createdAt") else None
     task_doc["updatedAt"] = task_doc.get("updatedAt").isoformat() if task_doc.get("updatedAt") else None
+
+    # Create notification if assignee changed by admin
+    if role == "admin" and new_assignee and new_assignee != old_assignee:
+        user_doc = users.find_one({"name": new_assignee})
+        if not user_doc:
+            user_doc = users.find_one({"name": {"$regex": f"^{new_assignee}$", "$options": "i"}})
+
+        if user_doc:
+            notification = {
+                "userEmail": user_doc.get("email"),
+                "taskId": str(task_id),
+                "taskName": data.get("name"),
+                "taskDescription": data.get("description", ""),
+                "assignedBy": user_email or "Admin",
+                "deadline": data.get("dueDate", data.get("deadline")),
+                "isRead": False,
+                "createdAt": now,
+                "type": "task_assignment"
+            }
+            notifications_col.insert_one(notification)
 
     return jsonify({"status": "success", "task": task_doc})
 
@@ -336,6 +415,67 @@ def delete_batch():
         object_ids = [ObjectId(tid) for tid in task_ids]
         tasks_col.delete_many({"_id": {"$in": object_ids}})
     return jsonify({"status": "success"})
+
+# --- NOTIFICATIONS ENDPOINTS ---
+
+@app.route("/notifications", methods=["GET"])
+def get_notifications():
+    """Get all notifications for the current user (unread first, then read)"""
+    user_email = request.args.get('email')
+    if not user_email:
+        return jsonify({"status": "fail", "message": "Email is required."}), 400
+
+    notifications = []
+    for n in notifications_col.find({"userEmail": user_email}).sort("isRead", 1).sort("createdAt", -1):
+        n["id"] = str(n["_id"])
+        del n["_id"]
+        n["createdAt"] = n.get("createdAt").isoformat() if n.get("createdAt") else None
+        notifications.append(n)
+    
+    unread_count = notifications_col.count_documents({"userEmail": user_email, "isRead": False})
+    
+    return jsonify({
+        "status": "success",
+        "notifications": notifications,
+        "unreadCount": unread_count
+    })
+
+@app.route("/notifications/<notification_id>/read", methods=["PUT"])
+def mark_notification_read(notification_id):
+    """Mark a notification as read"""
+    try:
+        notifications_col.update_one(
+            {"_id": ObjectId(notification_id)},
+            {"$set": {"isRead": True}}
+        )
+        return jsonify({"status": "success", "message": "Notification marked as read."})
+    except Exception as e:
+        return jsonify({"status": "fail", "message": str(e)}), 400
+
+@app.route("/notifications/<notification_id>", methods=["DELETE"])
+def delete_notification(notification_id):
+    """Delete a notification"""
+    try:
+        notifications_col.delete_one({"_id": ObjectId(notification_id)})
+        return jsonify({"status": "success", "message": "Notification deleted."})
+    except Exception as e:
+        return jsonify({"status": "fail", "message": str(e)}), 400
+
+@app.route("/notifications/batch/read", methods=["PUT"])
+def mark_all_notifications_read():
+    """Mark all notifications as read for a user"""
+    user_email = request.args.get('email')
+    if not user_email:
+        return jsonify({"status": "fail", "message": "Email is required."}), 400
+    
+    try:
+        notifications_col.update_many(
+            {"userEmail": user_email, "isRead": False},
+            {"$set": {"isRead": True}}
+        )
+        return jsonify({"status": "success", "message": "All notifications marked as read."})
+    except Exception as e:
+        return jsonify({"status": "fail", "message": str(e)}), 400
 
 # --- TEAMS ENDPOINTS ---
 
@@ -386,4 +526,8 @@ def delete_team(team_id):
     return jsonify({"status": "success"})
 
 if __name__ == "__main__":
-    app.run(debug=True, host="localhost", port=5000)
+    app.run(
+        debug=os.environ.get("FLASK_DEBUG", "false").lower() in ["1", "true", "yes"],
+        host=os.environ.get("HOST", "0.0.0.0"),
+        port=int(os.environ.get("PORT", 5000))
+    )

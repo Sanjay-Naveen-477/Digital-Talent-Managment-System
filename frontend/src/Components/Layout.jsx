@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { toast } from 'react-hot-toast';
+import { NotificationContext } from '../contexts/NotificationContext';
+import NotificationCenter from './NotificationCenter';
 import '../Dashboard/Dashboard.css';
 
 export default function Layout() {
@@ -8,8 +11,16 @@ export default function Layout() {
     const [name, setName] = useState('Guest');
     const [role, setRole] = useState('User');
     const [picture, setPicture] = useState(null);
+    const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
     const location = useLocation();
     const navigate = useNavigate();
+
+    const {
+        unreadCount,
+        showNotificationCenter,
+        setShowNotificationCenter,
+        notifications
+    } = useContext(NotificationContext);
 
     useEffect(() => {
         const loadProfile = () => {
@@ -21,6 +32,27 @@ export default function Layout() {
         window.addEventListener('profileUpdated', loadProfile);
         return () => window.removeEventListener('profileUpdated', loadProfile);
     }, []);
+
+    useEffect(() => {
+        const isAuthenticated = Boolean(localStorage.getItem('userEmail'));
+        if (!isAuthenticated) {
+            navigate('/', { replace: true });
+        }
+    }, [navigate]);
+
+    // Show toast when new notification arrives
+    useEffect(() => {
+        if (unreadCount > previousUnreadCount && unreadCount > 0) {
+            const latestNotification = notifications.find(n => !n.isRead);
+            if (latestNotification) {
+                toast.success(`New Notification: ${latestNotification.taskName}`, {
+                    icon: '🔔',
+                    duration: 4000,
+                });
+            }
+        }
+        setPreviousUnreadCount(unreadCount);
+    }, [unreadCount, notifications, previousUnreadCount]);
 
     return (
         <div className="dashboard-container">
@@ -91,10 +123,13 @@ export default function Layout() {
                             />
                         </div>
                         <div className="top-nav-right">
-                            <div className="icon-btn" onClick={() => navigate('/settings', { state: { tab: 'notifications' } })}>
+                            <div className="icon-btn notification-btn" onClick={() => setShowNotificationCenter(!showNotificationCenter)}>
                                 <svg width="20" height="20" fill="none" stroke="white" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
+                                {unreadCount > 0 && (
+                                    <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                                )}
                             </div>
                             <div className="user-profile" onClick={() => navigate('/settings', { state: { tab: 'profile' } })} style={{ cursor: 'pointer' }}>
                                 {picture ? (
@@ -112,6 +147,7 @@ export default function Layout() {
                     <Outlet context={{ searchTerm }} />
                 </main>
             </div>
+            <NotificationCenter />
         </div>
     );
 }

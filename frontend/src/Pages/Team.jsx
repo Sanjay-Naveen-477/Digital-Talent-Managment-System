@@ -2,11 +2,14 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import './Team.css';
+import CustomDropdown from '../Components/CustomDropdown';
 
 export default function Team() {
   const [role] = useState(() => localStorage.getItem('userRole') || 'user');
+  const userEmail = localStorage.getItem('userEmail') || '';
+  const userName = localStorage.getItem('userName') || '';
   const isAdmin = role === 'admin';
-  const apiHeaders = { headers: { 'X-User-Role': role } };
+  const apiHeaders = { headers: { 'X-User-Role': role, 'X-User-Email': userEmail, 'X-User-Name': userName } };
 
   const [teams, setTeams] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
@@ -210,7 +213,7 @@ export default function Team() {
   };
 
   const setTaskStatus = async (taskId, newStatus, taskObj) => {
-    if (!selectedTeam || !isAdmin) return;
+    if (!selectedTeam) return;
     const payload = {
       ...taskObj,
       status: newStatus
@@ -256,11 +259,18 @@ export default function Team() {
 
           <div className="team-controls-stack">
             <input className="team-search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search team name or lead..." />
-            <select className="team-form-select team-full-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="All">All</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+            <CustomDropdown
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { label: 'All', value: 'All' },
+                { label: 'Active', value: 'Active' },
+                { label: 'Inactive', value: 'Inactive' }
+              ]}
+              placeholder="Status"
+              style={{ flex: 1, maxWidth: '200px', minHeight: '46px' }}
+              dropdownStyle={{ minHeight: '46px' }}
+            />
             {isAdmin && (
               <div className="team-create-action">
                 <button className="add-member-btn" onClick={openNewTeam}>+ Create Team</button>
@@ -328,25 +338,30 @@ export default function Team() {
                        <button className="ds-btn-secondary" onClick={() => {setCustomRole(false); setMemberForm({...memberForm, role: ''});}} style={{padding: '0 8px'}}>✕</button>
                      </div>
                   ) : (
-                    <select className="ds-select" value={memberForm.role} onChange={(e) => {
-                      if (e.target.value === 'CUSTOM') setCustomRole(true);
-                      else setMemberForm({ ...memberForm, role: e.target.value });
-                    }}>
-                      <option value="" disabled>Role</option>
-                      <option value="Frontend">Frontend</option>
-                      <option value="Backend">Backend</option>
-                      <option value="Design">Design</option>
-                      <option value="QA">QA</option>
-                      <option value="Lead">Lead</option>
-                      <option value="CUSTOM">+ Add Custom</option>
-                    </select>
+                    <CustomDropdown
+                      value={memberForm.role}
+                      onChange={(val) => {
+                        if (val === 'CUSTOM') setCustomRole(true);
+                        else setMemberForm({ ...memberForm, role: val });
+                      }}
+                      options={[
+                        { label: 'Role', value: '', disabled: true },
+                        { label: 'Frontend', value: 'Frontend' },
+                        { label: 'Backend', value: 'Backend' },
+                        { label: 'Design', value: 'Design' },
+                        { label: 'QA', value: 'QA' },
+                        { label: 'Lead', value: 'Lead' },
+                        { label: '+ Add Custom', value: 'CUSTOM' }
+                      ]}
+                      placeholder="Role"
+                      style={{ flex: 1 }}
+                    />
                   )}
                   <button className="ds-btn-primary ds-btn-member" onClick={addMember}>Add Member</button>
                 </div>
               )}
             </div>
 
-            {isAdmin ? (
               <div className="ds-col ds-tasks-wrap">
                 <div className="ds-tasks-col">
                   <h3>Tasks</h3>
@@ -413,28 +428,32 @@ export default function Team() {
                   </ul>
                 </div>
               </div>
-            ) : null}
+
           </div>
         </section>
       )}
 
       {isModalOpen && (
         <div className="team-modal-overlay ds-blur-overlay" onClick={closeModal}>
-          <div className="team-modal-content ds-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="team-modal-header">
-              <h2 className="team-modal-title">{editingTeamId ? 'Edit Team' : 'Create Team'}</h2>
-              <button className="team-modal-close" onClick={closeModal}>×</button>
-            </div>
+          <div className="team-modal-content ds-modal" onClick={(e) => e.stopPropagation()} style={{textAlign: 'center', maxWidth: '400px', margin: 'auto'}}>
+            <h3 style={{marginBottom: '20px'}}>{editingTeamId ? 'Edit Team' : 'Create Team'}</h3>
             {error && <p className="team-error-message">{error}</p>}
-            <input className="team-form-input" value={teamForm.name} placeholder="Team name" onChange={(e) => setTeamForm((p) => ({ ...p, name: e.target.value }))} style={{ marginBottom: '10px' }} />
-            <input className="team-form-input" value={teamForm.lead} placeholder="Team lead" onChange={(e) => setTeamForm((p) => ({ ...p, lead: e.target.value }))} style={{ marginBottom: '10px' }} />
-            <select className="team-form-select" value={teamForm.status} onChange={(e) => setTeamForm((p) => ({ ...p, status: e.target.value }))} style={{ marginBottom: '20px' }}>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-            <div className="team-modal-buttons">
+            <input className="team-form-input" value={teamForm.name} placeholder="Team name" onChange={(e) => setTeamForm((p) => ({ ...p, name: e.target.value }))} style={{ marginBottom: '15px', textAlign: 'left' }} />
+            <input className="team-form-input" value={teamForm.lead} placeholder="Team lead" onChange={(e) => setTeamForm((p) => ({ ...p, lead: e.target.value }))} style={{ marginBottom: '15px', textAlign: 'left' }} />
+            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+              <CustomDropdown
+                value={teamForm.status}
+                onChange={(val) => setTeamForm((p) => ({ ...p, status: val }))}
+                options={[
+                  { label: 'Active', value: 'Active' },
+                  { label: 'Inactive', value: 'Inactive' }
+                ]}
+                placeholder="Status"
+              />
+            </div>
+            <div className="team-modal-buttons" style={{justifyContent: 'center', gap: '15px'}}>
               <button className="team-cancel-btn" type="button" onClick={closeModal}>Cancel</button>
-              <button className="team-submit-btn" type="button" onClick={saveTeam}>Save</button>
+              <button className="ds-btn-primary" type="button" onClick={saveTeam}>Save</button>
             </div>
           </div>
         </div>
@@ -499,16 +518,15 @@ export default function Team() {
 
               <div className="ds-form-group">
                 <label>Assigned To *</label>
-                <select 
-                  className="team-form-select" 
-                  value={taskForm.assignee} 
-                  onChange={(e) => setTaskForm({ ...taskForm, assignee: e.target.value })}
-                >
-                  <option value="" disabled>Select team member</option>
-                  {selectedTeam?.members?.map((m) => (
-                    <option key={m.id} value={m.name}>{m.name}</option>
-                  ))}
-                </select>
+                <CustomDropdown
+                  value={taskForm.assignee}
+                  onChange={(val) => setTaskForm({ ...taskForm, assignee: val })}
+                  options={[
+                    { label: 'Select team member', value: '', disabled: true },
+                    ...(selectedTeam?.members?.map((m) => ({ label: m.name, value: m.name })) || [])
+                  ]}
+                  placeholder="Select team member"
+                />
               </div>
 
               <div className="ds-form-row">
@@ -524,15 +542,16 @@ export default function Team() {
 
                 <div className="ds-form-group">
                   <label>Status</label>
-                  <select 
-                    className="team-form-select" 
-                    value={taskForm.status} 
-                    onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
+                  <CustomDropdown
+                    value={taskForm.status}
+                    onChange={(val) => setTaskForm({ ...taskForm, status: val })}
+                    options={[
+                      { label: 'Pending', value: 'pending' },
+                      { label: 'In Progress', value: 'progress' },
+                      { label: 'Completed', value: 'completed' }
+                    ]}
+                    placeholder="Status"
+                  />
                 </div>
               </div>
 

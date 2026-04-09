@@ -13,6 +13,7 @@ import {
   LineElement
 } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
+import CustomDropdown from '../Components/CustomDropdown';
 import './Reports.css';
 
 // Register Chart.js components
@@ -316,30 +317,30 @@ export default function Reports() {
           <section className="table-section">
             <div className="flex-between mb-4">
               <h3>Detailed Task Reports</h3>
-              <div className="filters-group">
-               
-                
-                <select 
-                  className="filter-input"
+              <div className="filters-group" style={{ display: 'flex', gap: '10px' }}>
+                <CustomDropdown
                   value={filterUser}
-                  onChange={(e) => setFilterUser(e.target.value)}
-                >
-                  <option value="All">All Users</option>
-                  {userPerformance.map(u => (
-                    <option key={u.name} value={u.name}>{u.name}</option>
-                  ))}
-                </select>
-                <select 
-                  className="filter-input"
+                  onChange={setFilterUser}
+                  options={[
+                    { label: 'All Users', value: 'All' },
+                    ...userPerformance.map(u => ({ label: u.name, value: u.name }))
+                  ]}
+                  placeholder="All Users"
+                  style={{ minWidth: '150px' }}
+                />
+                <CustomDropdown
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="Completed">Completed</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Delayed">Delayed</option>
-                </select>
+                  onChange={setFilterStatus}
+                  options={[
+                    { label: 'All Statuses', value: 'All' },
+                    { label: 'Completed', value: 'Completed' },
+                    { label: 'In Progress', value: 'In Progress' },
+                    { label: 'Pending', value: 'Pending' },
+                    { label: 'Delayed', value: 'Delayed' }
+                  ]}
+                  placeholder="All Statuses"
+                  style={{ minWidth: '150px' }}
+                />
               </div>
             </div>
             

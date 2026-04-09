@@ -3,6 +3,9 @@ import { useOutletContext } from 'react-router-dom';
 import Chart from 'chart.js/auto';
 import axios from 'axios';
 import './Dashboard.css';
+import CustomDropdown from '../Components/CustomDropdown';
+
+
 
 export default function Dashboard() {
     const { searchTerm } = useOutletContext() || { searchTerm: '' };
@@ -190,18 +193,29 @@ export default function Dashboard() {
                             </div>
 
                             <div className="filters">
-                                <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                                    <option value="all">All Status</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="progress">In Progress</option>
-                                    <option value="completed">Completed</option>
-                                </select>
-                                <select className="filter-select" value={userFilter} onChange={(e) => setUserFilter(e.target.value)}>
-                                    <option value="all">All Users</option>
-                                    <option value="john">John Doe</option>
-                                    <option value="sarah">Sarah Miller</option>
-                                    <option value="mike">Mike Johnson</option>
-                                </select>
+                                <CustomDropdown 
+                                    value={statusFilter} 
+                                    onChange={setStatusFilter} 
+                                    placeholder="All Status"
+                                    options={[
+                                        { value: 'all', label: 'All Status' },
+                                        { value: 'pending', label: 'Pending' },
+                                        { value: 'progress', label: 'In Progress' },
+                                        { value: 'completed', label: 'Completed' }
+                                    ]} 
+                                />
+                                <CustomDropdown 
+                                    value={userFilter} 
+                                    onChange={setUserFilter} 
+                                    placeholder="All Users"
+                                    options={[
+                                        { value: 'all', label: 'All Users' },
+                                        ...Array.from(new Set(tasks.map(t => t.assignedTo || t.userName || t.user).filter(Boolean))).map(name => ({
+                                            value: name.toLowerCase(),
+                                            label: name
+                                        }))
+                                    ]}
+                                />
                             </div>
 
                             <div className="table-container">
@@ -217,7 +231,7 @@ export default function Dashboard() {
                                     <tbody>
                                         {tasks
                                             .filter(t => (statusFilter === 'all' || t.status === statusFilter) &&
-                                                (userFilter === 'all' || (t.user || '').toLowerCase() === userFilter) &&
+                                                (userFilter === 'all' || (t.assignedTo || t.userName || t.user || '').toLowerCase() === userFilter) &&
                                                 (t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                                     (t.assignedTo || '').toLowerCase().includes(searchTerm.toLowerCase())))
                                             .map((task) => (

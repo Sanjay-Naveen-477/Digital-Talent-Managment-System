@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import CustomDropdown from '../Components/CustomDropdown';
 import "./login.css";
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
@@ -33,6 +34,12 @@ function Login() {
   const [signUpSuccessMsg, setSignUpSuccessMsg] = useState("");
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem('userEmail')) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
 
   const particlesInit = useCallback(async engine => {
     await loadFull(engine);
@@ -263,17 +270,17 @@ function Login() {
             {signUpError && <div className="error-message">{signUpError}</div>}
 
             <form onSubmit={handleSignUp}>
-              <div className="form-group">
+              <div className="form-group" style={{ zIndex: 10 }}>
                 <label className="form-label">Role</label>
-                <select
-                  className="form-input"
+                <CustomDropdown
                   value={signUpData.role}
-                  onChange={(e) => setSignUpData({ ...signUpData, role: e.target.value })}
-                  required
-                >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                </select>
+                  onChange={(val) => setSignUpData({ ...signUpData, role: val })}
+                  options={[
+                    { label: 'User', value: 'user' },
+                    { label: 'Admin', value: 'admin' }
+                  ]}
+                  placeholder="Select Role"
+                />
               </div>
 
               <div className="form-group">
