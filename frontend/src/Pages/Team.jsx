@@ -4,7 +4,7 @@ import axios from 'axios';
 import './Team.css';
 import CustomDropdown from '../Components/CustomDropdown';
 
-export default function Team() {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';export default function Team() {
   const [role] = useState(() => localStorage.getItem('userRole') || 'user');
   const userEmail = localStorage.getItem('userEmail') || '';
   const userName = localStorage.getItem('userName') || '';
@@ -40,8 +40,8 @@ export default function Team() {
   const fetchTeamsAndTasks = async () => {
     try {
       const [teamsRes, tasksRes] = await Promise.all([
-        axios.get('http://localhost:5000/teams'),
-        axios.get('http://localhost:5000/tasks')
+        axios.get(`${API_URL}/teams`),
+        axios.get(`${API_URL}/tasks`)
       ]);
       if (teamsRes.data.status === 'success') {
         const robustTeams = teamsRes.data.teams.map(t => ({ ...t, members: t.members || [] }));
@@ -122,11 +122,11 @@ export default function Team() {
       if (editingTeamId) {
         const teamObj = teams.find(t => t.id === editingTeamId);
         const payload = { ...teamObj, name: teamForm.name.trim(), lead: teamForm.lead.trim(), status: teamForm.status };
-        await axios.put(`http://localhost:5000/teams/${editingTeamId}`, payload, apiHeaders);
+        await axios.put(`${API_URL}/teams/${editingTeamId}`, payload, apiHeaders);
         toast.success('Team updated successfully!', { id: 'crud' });
       } else {
         const payload = { ...teamForm, members: [] };
-        await axios.post('http://localhost:5000/teams', payload, apiHeaders);
+        await axios.post(`${API_URL}/teams`, payload, apiHeaders);
         toast.success('Team created successfully!', { id: 'crud' });
       }
       fetchTeamsAndTasks();
@@ -140,7 +140,7 @@ export default function Team() {
   const deleteTeam = async (id) => {
     if (!isAdmin) return;
     try {
-      await axios.delete(`http://localhost:5000/teams/${id}`, apiHeaders);
+      await axios.delete(`${API_URL}/teams/${id}`, apiHeaders);
       if (selectedTeamId === id) setSelectedTeamId(null);
       fetchTeamsAndTasks();
       setTeamToDelete(null);
@@ -160,7 +160,7 @@ export default function Team() {
     const updatedTeam = { ...selectedTeam, members: [...selectedTeam.members, newMember] };
     
     try {
-      await axios.put(`http://localhost:5000/teams/${selectedTeam.id}`, updatedTeam, apiHeaders);
+      await axios.put(`${API_URL}/teams/${selectedTeam.id}`, updatedTeam, apiHeaders);
       fetchTeamsAndTasks();
       setMemberForm({ name: '', role: '' });
       setCustomRole(false);
@@ -174,7 +174,7 @@ export default function Team() {
     if (!selectedTeam || !isAdmin) return;
     const updatedTeam = { ...selectedTeam, members: selectedTeam.members.filter((m) => m.id !== memberId) };
     try {
-      await axios.put(`http://localhost:5000/teams/${selectedTeam.id}`, updatedTeam, apiHeaders);
+      await axios.put(`${API_URL}/teams/${selectedTeam.id}`, updatedTeam, apiHeaders);
       fetchTeamsAndTasks();
       toast.success('Member removed successfully!', { id: 'crud' });
     } catch (err) {
@@ -203,7 +203,7 @@ export default function Team() {
     };
 
     try {
-      await axios.post(`http://localhost:5000/tasks`, payload, apiHeaders);
+      await axios.post(`${API_URL}/tasks`, payload, apiHeaders);
       fetchTeamsAndTasks();
       closeTaskModal();
       toast.success('Task added successfully!', { id: 'crud' });
@@ -219,7 +219,7 @@ export default function Team() {
       status: newStatus
     };
     try {
-      await axios.put(`http://localhost:5000/tasks/${taskId}`, payload, apiHeaders);
+      await axios.put(`${API_URL}/tasks/${taskId}`, payload, apiHeaders);
       fetchTeamsAndTasks();
       setOpenTaskDropdown(null);
       toast.success(`Task marked as ${newStatus}!`, { id: 'crud' });
@@ -231,7 +231,7 @@ export default function Team() {
   const deleteTask = async (taskId) => {
     if (!selectedTeam || !isAdmin) return;
     try {
-      await axios.delete(`http://localhost:5000/tasks/${taskId}`, apiHeaders);
+      await axios.delete(`${API_URL}/tasks/${taskId}`, apiHeaders);
       fetchTeamsAndTasks();
       setTaskToDelete(null);
       setOpenTaskDropdown(null);

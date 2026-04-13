@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Settings.css';
 
-const API_URL = 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const TABS = [
   { id: 'profile', icon: '👤', label: 'Profile Settings' },

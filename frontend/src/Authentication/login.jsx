@@ -8,7 +8,7 @@ import { jwtDecode } from "jwt-decode";
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 // Suppress Google OAuth console errors that don't affect functionality
 const originalError = console.error;

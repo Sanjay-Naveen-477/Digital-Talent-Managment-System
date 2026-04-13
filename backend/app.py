@@ -8,17 +8,9 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Deployment-friendly configuration
-default_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
-allowed_origins = os.environ.get("CORS_ORIGINS")
-if allowed_origins:
-    allowed_origins = [origin.strip() for origin in allowed_origins.split(",") if origin.strip()]
-else:
-    allowed_origins = default_origins
-
 CORS(app, resources={
-    r"/*": {"origins": allowed_origins}
-}, supports_credentials=True)
+    r"/*": {"origins": "*"}
+})
 
 mongo_uri = os.environ.get(
     "MONGO_URI",

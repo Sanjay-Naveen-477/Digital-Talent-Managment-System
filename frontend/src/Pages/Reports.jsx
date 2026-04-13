@@ -60,7 +60,7 @@ export default function Reports() {
     async function fetchReports() {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:5000/reports');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/reports`);
         if (response.data.status === 'success' && response.data.data) {
           const payload = response.data.data;
           setSummaryMetrics(payload.summary);
