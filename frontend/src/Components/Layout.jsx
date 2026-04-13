@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { toast } from 'react-hot-toast';
 import { NotificationContext } from '../contexts/NotificationContext';
 import NotificationCenter from './NotificationCenter';
@@ -33,13 +33,6 @@ export default function Layout() {
         return () => window.removeEventListener('profileUpdated', loadProfile);
     }, []);
 
-    useEffect(() => {
-        const isAuthenticated = Boolean(localStorage.getItem('userEmail'));
-        if (!isAuthenticated) {
-            navigate('/', { replace: true });
-        }
-    }, [navigate]);
-
     // Show toast when new notification arrives
     useEffect(() => {
         if (unreadCount > previousUnreadCount && unreadCount > 0) {
@@ -53,6 +46,11 @@ export default function Layout() {
         }
         setPreviousUnreadCount(unreadCount);
     }, [unreadCount, notifications, previousUnreadCount]);
+
+    const isAuthenticated = Boolean(localStorage.getItem('userEmail'));
+    if (!isAuthenticated) {
+        return <Navigate to="/" replace />;
+    }
 
     return (
         <div className="dashboard-container">
